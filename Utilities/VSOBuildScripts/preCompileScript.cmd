@@ -1,5 +1,3 @@
-rem See https://microsoft.sharepoint.com/teams/osg_xboxtv/xengsrv/SitePages/Extensibility%20Hooks.aspx for details
-rem if '%TFS_IsFirstBuild%' NEQ 'True' goto done
 echo Running preCompileScript.cmd
 
 call %TFS_SourcesDirectory%\Utilities\VSOBuildScripts\setBuildVersion.cmd
@@ -39,19 +37,29 @@ echo. >> %BUILD_VERSION_FILE%
 echo #define XBOX_SERVICES_API_VERSION_STRING _T("%NUGET_VERSION_NUMBER%") >> %BUILD_VERSION_FILE%
 type %BUILD_VERSION_FILE%
 
+rem generate the .Ship. vcxprojs
+call %TFS_SourcesDirectory%\Utilities\VSOBuildScripts\MakeShipProjects.cmd %TFS_SourcesDirectory%
+
 rem create the build.cpp files
 del %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.110.XDK.Cpp\build.cpp
 del %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.140.XDK.Cpp\build.cpp
 del %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.141.XDK.Cpp\build.cpp
 del %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.140.UWP.Cpp\build.cpp
+del %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.141.UWP.Cpp\build.cpp
 %TFS_SourcesDirectory%\Utilities\VSOBuildScripts\GenSDKBuildCppFile.exe %TFS_SourcesDirectory% %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.110.XDK.Cpp\build.cpp xbox
 %TFS_SourcesDirectory%\Utilities\VSOBuildScripts\GenSDKBuildCppFile.exe %TFS_SourcesDirectory% %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.140.XDK.Cpp\build.cpp xbox
 %TFS_SourcesDirectory%\Utilities\VSOBuildScripts\GenSDKBuildCppFile.exe %TFS_SourcesDirectory% %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.141.XDK.Cpp\build.cpp xbox
 %TFS_SourcesDirectory%\Utilities\VSOBuildScripts\GenSDKBuildCppFile.exe %TFS_SourcesDirectory% %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.140.UWP.Cpp\build.cpp uwp
+%TFS_SourcesDirectory%\Utilities\VSOBuildScripts\GenSDKBuildCppFile.exe %TFS_SourcesDirectory% %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.141.UWP.Cpp\build.cpp uwp
 dir %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.110.XDK.Cpp\build.cpp
 dir %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.140.XDK.Cpp\build.cpp
 dir %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.141.XDK.Cpp\build.cpp
 dir %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.140.UWP.Cpp\build.cpp
+dir %TFS_SourcesDirectory%\Build\Microsoft.Xbox.Services.141.UWP.Cpp\build.cpp
+
+rem generate and compare against what's in git to see if any vcxproj is stale and email team if it is
+call %TFS_SourcesDirectory%\Utilities\CMake\MakeProjects.cmd %TFS_SourcesDirectory% skipCopy
+call %TFS_SourcesDirectory%\Utilities\VSOBuildScripts\CompareBuildFiles.cmd %TFS_SourcesDirectory% emailfailures
 
 echo Done preCompileScript.cmd
 :done

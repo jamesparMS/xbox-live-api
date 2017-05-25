@@ -82,6 +82,7 @@ class title_callable_ui
 {
 public:
 #if UWP_API
+#if !defined(XBOX_LIVE_CREATORS_SDK)
     /// <summary>
     /// Shows a picker UI that allows a person playing the game to select players
     /// from a presented list of other people.
@@ -118,7 +119,7 @@ public:
     /// <param name="contextStringId">The custom context string ID.  This string ID is defined
     /// during Xbox Live ingestion to identify the invitation text that is additional to the standard
     /// invitation text. The ID string must be prefixed with "///".  Pass an empty string if
-    /// you don’t want a custom string added to the invite.</param>
+    /// you don't want a custom string added to the invite.</param>
     /// <param name="user">System user that identifies which user is sending the invite</param>
     /// <returns>
     /// Returns a pplx::task&lt;T&gt; object that represents the state of the asynchronous operation.
@@ -129,22 +130,6 @@ public:
     show_game_invite_ui(
         _In_ const xbox::services::multiplayer::multiplayer_session_reference& sessionReference,
         _In_ const string_t& contextStringId,
-        _In_opt_ Windows::System::User^ user = nullptr
-        );
-
-    /// <summary>
-    /// Shows UI displaying the profile card for a specified user.
-    /// </summary>
-    /// <param name="targetXboxUserId">The Xbox User ID to show information about.</param>
-    /// <param name="user">System user that identifies the user to show the UI on behalf of</param>
-    /// <returns>
-    /// Returns a pplx::task&lt;T&gt; object that represents the state of the asynchronous operation.
-    /// The task completes when the UI is closed.
-    /// result.err() contains the error based on what happened in the case of an error.
-    /// </returns>
-    _XSAPIIMP static pplx::task<xbox::services::xbox_live_result<void>>
-    show_profile_card_ui(
-        _In_ const string_t& targetXboxUserId,
         _In_opt_ Windows::System::User^ user = nullptr
         );
 
@@ -179,6 +164,23 @@ public:
         _In_ uint32_t titleId,
         _In_opt_ Windows::System::User^ user = nullptr
         );
+#endif // !defined(XBOX_LIVE_CREATORS_SDK)
+
+    /// <summary>
+    /// Shows UI displaying the profile card for a specified user.
+    /// </summary>
+    /// <param name="targetXboxUserId">The Xbox User ID to show information about.</param>
+    /// <param name="user">System user that identifies the user to show the UI on behalf of</param>
+    /// <returns>
+    /// Returns a pplx::task&lt;T&gt; object that represents the state of the asynchronous operation.
+    /// The task completes when the UI is closed.
+    /// result.err() contains the error based on what happened in the case of an error.
+    /// </returns>
+    _XSAPIIMP static pplx::task<xbox::services::xbox_live_result<void>>
+    show_profile_card_ui(
+        _In_ const string_t& targetXboxUserId,
+        _In_opt_ Windows::System::User^ user = nullptr
+        );
 
     /// <summary>
     /// Checks if the current user has a specific privilege
@@ -200,7 +202,7 @@ public:
     /// </summary>
     /// <param name="privilege">The privilege to check.</param>
     /// <param name="friendlyMessage">Text to display in addition to the stock text about the privilege.
-    /// Pass an empty string if you don’t want a message added.</param>
+    /// Pass an empty string if you don't want a message added.</param>
     /// <param name="user">System user that identifies the user to show the UI on behalf of</param>
     /// <returns>
     /// Returns a pplx::task&lt;T&gt; object that represents the state of the asynchronous operation.
@@ -251,7 +253,7 @@ public:
     /// <param name="contextStringId">The custom context string ID.  This string ID is defined
     /// during Xbox Live ingestion to identify the invitation text that is additional to the standard
     /// invitation text. The ID string must be prefixed with "///".  Pass an empty string if
-    /// you don’t want a custom string added to the invite.</param>
+    /// you don't want a custom string added to the invite.</param>
     /// <returns>
     /// Returns a pplx::task&lt;T&gt; object that represents the state of the asynchronous operation.
     /// The task completes when the UI is closed.
@@ -323,7 +325,7 @@ public:
     /// </summary>
     /// <param name="privilege">The privilege to check.</param>
     /// <param name="friendlyMessage">Text to display in addition to the stock text about the privilege.
-    /// Pass an empty string if you don’t want a message added.</param>
+    /// Pass an empty string if you don't want a message added.</param>
     /// <returns>
     /// Returns a pplx::task&lt;T&gt; object that represents the state of the asynchronous operation.
     /// The task completes when the UI is closed.

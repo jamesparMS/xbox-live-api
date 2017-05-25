@@ -18,13 +18,9 @@
 #include <objbase.h>
 #endif
 #include "http_call_response.h"
-#if !BEAM_API
 #include "xsapi/presence.h"
-#endif
 #include "xsapi/system.h"
-#if !BEAM_API
 #include "presence_internal.h"
-#endif
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN
 
@@ -40,7 +36,7 @@ static std::mutex g_xsapiSingletonLock;
 static std::shared_ptr<xsapi_singleton> g_xsapiSingleton;
 
 xsapi_singleton::xsapi_singleton() 
-#if !TV_API && !XSAPI_SERVER && !BEAM_API
+#if !TV_API && !XSAPI_SERVER
     : s_presenceWriterSingleton(std::shared_ptr<XBOX_LIVE_NAMESPACE::presence::presence_writer>(new XBOX_LIVE_NAMESPACE::presence::presence_writer()))
 #endif
 {
@@ -801,10 +797,7 @@ utils::convert_xbox_live_error_code_to_hresult(
 {
     int err = static_cast<int>(errCode.value());
     xbox_live_error_code xblErr = static_cast<xbox_live_error_code>(err);
-    if ((err > 0x8007E000 && err < 0x800D000 )|| (err > 0x80860000 && err > 0x808600FF))
-    {
-        return err;
-    }
+
     if (err == 204)
     {
         return __HRESULT_FROM_WIN32(ERROR_RESOURCE_DATA_NOT_FOUND);
@@ -848,7 +841,7 @@ utils::convert_xbox_live_error_code_to_hresult(
     {
         return HTTP_E_STATUS_UNEXPECTED_SERVER_ERROR;
     }
-    else return E_FAIL;
+    else return err; //return the original error code if can't be translated.
 }
 
 long utils::convert_http_status_to_hresult(_In_ uint32_t httpStatusCode)

@@ -726,6 +726,22 @@ multiplayer_session::set_session_capabilities(
     return xbox_live_error_code::no_error;
 }
 
+std::error_code 
+multiplayer_session::set_cloud_compute_package_json(
+    _In_ web::json::value sessionCloudComputePackageConstantsJson
+    )
+{
+    // Call set_cloud_compute_package_json/SetCloudComputePackageJson before writing a new session to the service
+    if (!m_newSession)
+    {
+        return xbox_live_error_code::logic_error;
+    }
+
+    m_sessionConstants->_Set_cloud_compute_package_json(sessionCloudComputePackageConstantsJson);
+
+    return xbox_live_error_code::no_error;
+}
+
 void
 multiplayer_session::set_initialization_status(
     _In_ bool initializationSucceeded
@@ -771,6 +787,24 @@ multiplayer_session::set_closed(
 {
     m_sessionRequest->set_write_closed(true);
     m_sessionRequest->set_closed(closed);
+}
+
+void
+multiplayer_session::set_locked(
+    _In_ bool locked
+    )
+{
+    m_sessionRequest->set_write_locked(true);
+    m_sessionRequest->set_locked(locked);
+}
+
+void 
+multiplayer_session::set_allocate_cloud_compute(
+    _In_ bool allocateCloudCompute
+    )
+{
+    m_sessionRequest->set_write_allocate_cloud_compute(true);
+    m_sessionRequest->set_allocate_cloud_compute(allocateCloudCompute);
 }
 
 void
@@ -1465,6 +1499,7 @@ multiplayer_session::compare_multiplayer_sessions(
     
 
     if (currentSession->session_properties()->closed() != oldSession->session_properties()->closed() ||
+        currentSession->session_properties()->locked() != oldSession->session_properties()->locked() ||
         currentSession->session_properties()->join_restriction() != oldSession->session_properties()->join_restriction() ||
         (currentSession->members().size() == currentSession->session_constants()->max_members_in_session()) != 
         (oldSession->members().size() == oldSession->session_constants()->max_members_in_session())     // if the session is open again or closed again because the max member has changed
@@ -1558,6 +1593,7 @@ multiplayer_session::_Deserialize(
         utils::extract_json_field(
             json, 
             _T("properties"), 
+            errc,
             true
             )
         );

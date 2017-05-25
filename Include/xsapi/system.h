@@ -28,12 +28,10 @@ NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN
         class events_service;
     }
 
-#if !BEAM_API
     namespace multiplayer { namespace manager {
         class multiplayer_client_manager;
         class multiplayer_local_user;
     }}
-#endif
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_END
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN
@@ -55,27 +53,35 @@ public:
     /// <summary>
     /// Returns the xbox user id for the WNS event
     /// </summary>
-    const string_t& xbox_user_id() const { return m_xbox_user_id; }
+    _XSAPIIMP const string_t& xbox_user_id() const { return m_xbox_user_id; }
 
     /// <summary>
     /// Returns the notification type
     /// </summary>
-    const string_t& notification_type() const { return m_notification_type; }
+    _XSAPIIMP const string_t& notification_type() const { return m_notification_type; }
+
+    /// <summary>
+    /// Returns the full notification content
+    /// </summary>
+    _XSAPIIMP const string_t& notification_content() const { return m_notification_content; }
 
     /// <summary>
     /// Internal function
     /// </summary>
     xbox_live_wns_event_args(
         _In_ string_t xbox_user_id,
-        _In_ string_t notification_type
+        _In_ string_t notification_type,
+        _In_ string_t notification_content
     ) :
     m_xbox_user_id(std::move(xbox_user_id)),
-    m_notification_type(std::move(notification_type))
+    m_notification_type(std::move(notification_type)),
+    m_notification_content(std::move(notification_content))
     {}
 
 private:
     string_t m_xbox_user_id;
     string_t m_notification_type;
+    string_t m_notification_content;
 };
 
 class xbox_live_services_settings : public std::enable_shared_from_this<xbox_live_services_settings>
@@ -155,7 +161,7 @@ public:
     /// <summary>
     /// Internal function
     /// </summary>
-    void _Raise_wns_event(_In_ const string_t& xbox_user_id, _In_ const string_t& nofitication_type);
+    void _Raise_wns_event(_In_ const string_t& xbox_user_id, _In_ const string_t& nofitication_type, _In_ const string_t& content);
 
     /// <summary>
     /// Internal function
@@ -493,6 +499,13 @@ public:
     /// </summary>
     _XSAPIIMP xbox_live_user();
 
+#if WINAPI_FAMILY && WINAPI_FAMILY==WINAPI_FAMILY_APP
+    /// <summary>
+    /// Creates a new instance of XboxLiveUser for Multi-User Application.
+    /// </summary>
+    _XSAPIIMP xbox_live_user(Windows::System::User^ systemUser);
+#endif
+
     /// <summary>
     /// Gets a unique ID that is tied to the user's account which persists across multiple devices.
     /// </summary>
@@ -529,6 +542,11 @@ public:
     /// for more information about WebAccount
     /// </remarks>
     _XSAPIIMP const string_t& web_account_id() const;
+
+    /// <summary>
+    /// The Windows System NT user associated with the Xbox Live User, only avaliable in Multi-User application.
+    /// </summary>
+    _XSAPIIMP Windows::System::User^ windows_system_user() const;
 #endif
 
     /// <summary>

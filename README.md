@@ -9,8 +9,8 @@ https://developer.microsoft.com/en-us/games/xbox/docs/xboxlive/get-started/devel
 
 *   Xbox Live Features - profile, social, presence, leaderboards, achievements, multiplayer, matchmaking, title storage
 *   Platforms - Windows UWP on Xbox One consoles and Windows 10 PCs, Xbox One XDK
-*   Support for Visual Studio 2012 and 2015
-*   NuGet package with binaries for Windows and Xbox One platforms
+*   Support for Visual Studio 2017, 2015, and 2012
+*   NuGet packages containing binaries for Windows and Xbox One platforms
 
 ## How to use the Xbox Live Services API (XSAPI)
 
@@ -26,9 +26,10 @@ When initially cloning, make sure you use the "--recursive" option. IE:
 
 If you already cloned the repo, you can initialize submodules with:
 
-    git submodule update --init
+    git submodule sync
+    git submodule update --init --recursive
 
-Note that using GitHub's feature to "Download Zip" instead of cloning does not contain the submodules and will not properly build.  Please clone recursively instead.
+Note that using GitHub's feature to "Download Zip" does not contain the submodules and will not properly build.  Please clone recursively instead.
 
 ## How to link your project against source
 

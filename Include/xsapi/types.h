@@ -106,15 +106,9 @@ typedef std::chrono::steady_clock chrono_clock_t;
 // Forward declarations
 namespace xbox {
     namespace services {
-#if BEAM_API
-        namespace beam {
-#endif
-            class user_context;
-            class xbox_live_context_settings;
-            class local_config;
-#if BEAM_API
-        }
-#endif
+        class user_context;
+        class xbox_live_context_settings;
+        class local_config;
     }
 }
 
@@ -141,28 +135,11 @@ typedef void* user_creation_context;
 typedef  Windows::Xbox::System::User^ xbox_live_user_t;
 #endif
 
-
-#if UWP_API
-    extern bool g_is_xbox_live_creators_sdk;
-    #if XSAPI_CPP
-        // The same C++ binary is shared to titles with and without XBOX_LIVE_CREATORS_SDK defined
-        // XSAPI uses an external bool that will be defined at the time of when the title includes this header
-        #if !defined(XSAPI_BUILD)
-            #if defined(XBOX_LIVE_CREATORS_SDK)
-                bool g_is_xbox_live_creators_sdk = true;
-            #else
-                bool g_is_xbox_live_creators_sdk = false;
-            #endif
-        #endif
-    #endif
-#endif
-
-
 #if defined(XSAPI_CPPWINRT)
 #if TV_API
 inline Windows::Xbox::System::User^ convert_user_to_cppcx(_In_ const winrt::Windows::Xbox::System::User& user)
 {
-    winrt::ABI::Windows::Xbox::System::IUser* abiUser = winrt::get(user);
+    winrt::ABI::Windows::Xbox::System::IUser* abiUser = winrt::get_abi(user);
     return reinterpret_cast<Windows::Xbox::System::User^>(abiUser);
 }
 
@@ -171,7 +148,7 @@ inline Windows::ApplicationModel::Activation::IProtocolActivatedEventArgs^ conve
     _In_ const winrt::Windows::ApplicationModel::Activation::IProtocolActivatedEventArgs& eventArgs
 )
 {
-    winrt::ABI::Windows::ApplicationModel::Activation::IProtocolActivatedEventArgs* abiEventArgs = winrt::get(eventArgs);
+    winrt::ABI::Windows::ApplicationModel::Activation::IProtocolActivatedEventArgs* abiEventArgs = winrt::get_abi(eventArgs);
     return reinterpret_cast<Windows::ApplicationModel::Activation::IProtocolActivatedEventArgs^>(abiEventArgs);
 }
 #endif
@@ -191,7 +168,7 @@ inline std::vector<Windows::Xbox::System::User^> convert_user_vector_to_cppcx(
 inline winrt::Windows::Xbox::System::User convert_user_to_cppwinrt(_In_ Windows::Xbox::System::User^ user)
 {
     winrt::Windows::Xbox::System::User cppWinrtUser(nullptr);
-    winrt::copy_from(cppWinrtUser, reinterpret_cast<winrt::ABI::Windows::Xbox::System::IUser*>(user));
+    winrt::copy_from_abi(cppWinrtUser, reinterpret_cast<winrt::ABI::Windows::Xbox::System::IUser*>(user));
     return cppWinrtUser;
 }
 
@@ -210,21 +187,12 @@ inline std::vector<winrt::Windows::Xbox::System::User> convert_user_vector_to_cp
 #endif
 
 
-#if BEAM_API
-#define XBOX_LIVE_NAMESPACE xbox::services::beam
-
-#define NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN                     namespace xbox { namespace services { namespace beam {
-#define NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_END                       }}}
-#define NAMESPACE_MICROSOFT_XBOX_SERVICES_BEGIN                         namespace Microsoft { namespace Xbox { namespace Services { namespace Beam {
-#define NAMESPACE_MICROSOFT_XBOX_SERVICES_END                           }}}}
-#else
 #define XBOX_LIVE_NAMESPACE xbox::services
 
 #define NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN                     namespace xbox { namespace services {
 #define NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_END                       }}
 #define NAMESPACE_MICROSOFT_XBOX_SERVICES_BEGIN                         namespace Microsoft { namespace Xbox { namespace Services { 
 #define NAMESPACE_MICROSOFT_XBOX_SERVICES_END                           }}}
-#endif
 
 #define NAMESPACE_MICROSOFT_XBOX_SERVICES_SYSTEM_CPP_BEGIN              NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN namespace system {
 #define NAMESPACE_MICROSOFT_XBOX_SERVICES_SYSTEM_CPP_END                NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_END }

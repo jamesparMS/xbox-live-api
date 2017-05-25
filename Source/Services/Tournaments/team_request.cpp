@@ -11,29 +11,37 @@ NAMESPACE_MICROSOFT_XBOX_SERVICES_TOURNAMENTS_CPP_BEGIN
 
 team_request::team_request(
     _In_ string_t organizerId,
-    _In_ string_t tournamentId
+    _In_ string_t tournamentId,
+    _In_ bool filterResultsForUser
     ) :
     m_organizerId(std::move(organizerId)),
     m_tournamentId(std::move(tournamentId)),
+    m_filterResultsForUser(filterResultsForUser),
     m_maxItems(0),
     m_orderBy(team_order_by::none)
 {
 }
 
+bool
+team_request::filter_results_for_user() const
+{
+    return m_filterResultsForUser;
+}
+
 const string_t&
-team_request::_Organizer_id() const
+team_request::organizer_id() const
 {
     return m_organizerId;
 }
 
 const string_t&
-team_request::_Tournament_id() const
+team_request::tournament_id() const
 {
     return m_tournamentId;
 }
 
 uint32_t
-team_request::_Max_items() const
+team_request::max_items() const
 {
     return m_maxItems;
 }
@@ -47,7 +55,7 @@ team_request::set_max_items(
 }
 
 const std::vector<team_state>&
-team_request::_Team_states() const
+team_request::state_filter() const
 {
     return m_states;
 }
@@ -61,7 +69,7 @@ team_request::set_state_filter(
 }
 
 team_order_by
-team_request::_Order_by() const
+team_request::order_by() const
 {
     return m_orderBy;
 }

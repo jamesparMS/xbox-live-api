@@ -333,6 +333,17 @@ public:
     bool closed() const;
     void set_closed(_In_ bool closed);
 
+    bool write_locked() const;
+    void set_write_locked(_In_ bool writeLocked);
+    bool locked() const;
+    void set_locked(_In_ bool locked);
+
+    bool write_allocate_cloud_compute() const;
+    void set_write_allocate_cloud_compute(_In_ bool writeAllocateCloudCompute);
+
+    bool allocate_cloud_compute() const;
+    void set_allocate_cloud_compute(_In_ bool allocateCloudCompute);
+
     void set_mutable_role_settings(_In_ const std::unordered_map<string_t, multiplayer_role_type>& roleTypes);
 
     web::json::value create_properties_json();
@@ -374,6 +385,10 @@ private:
     xbox::services::system::xbox_live_mutex m_lock;
     bool m_writeClosed;
     bool m_closed;
+    bool m_writeLocked;
+    bool m_locked;
+    bool m_writeAllocateCloudCompute;
+    bool m_allocateCloudCompute;
 };
 
 class multiplayer_invite

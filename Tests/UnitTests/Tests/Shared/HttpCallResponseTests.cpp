@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #include "pch.h"
-#define TEST_CLASS_OWNER L"jasonsa2"
+#define TEST_CLASS_OWNER L"jasonsa"
 #define TEST_CLASS_AREA L"HttpCallResponse"
 #include "UnitTestIncludes.h"
 #define MAKE_HTTP_HRESULT(code) MAKE_HRESULT(1, 0x019, code)
@@ -75,7 +75,7 @@ public:
 
         int32_t result = utils::convert_http_status_to_hresult(429);
         VERIFY_IS_TRUE(0x801901AD == result); // 0x1AD = 429
-        VERIFY_ARE_EQUAL_STR(L"HTTP_E_STATUS_429_TOO_MANY_REQUESTS", utils::convert_hresult_to_error_name(0x801901AD));  
+        VERIFY_ARE_EQUAL_STR("HTTP_E_STATUS_429_TOO_MANY_REQUESTS", utils::convert_hresult_to_error_name(0x801901AD));  
     }
 
     DEFINE_TEST_CASE(TestHttpCallResponse)

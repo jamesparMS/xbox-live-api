@@ -10,6 +10,7 @@
 #include "web_socket_connection_state.h"
 #include "web_socket_client.h"
 #include "utils.h"
+#include "xbox_live_app_config_internal.h"
 using namespace pplx;
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_RTA_CPP_BEGIN
@@ -42,21 +43,23 @@ void
 real_time_activity_service::activate()
 {
     std::lock_guard<std::recursive_mutex> lock(m_lock);
+    auto& xuid = m_userContext->xbox_user_id();
     int activationCount = 0;
     {
-        std::lock_guard<std::mutex> guard(get_xsapi_singleton()->s_rtaActivationCounterLock);
+        auto xsapiSingleton = get_xsapi_singleton();
+        std::lock_guard<std::mutex> guard(xsapiSingleton->m_rtaActivationCounterLock);
         if (m_webSocketConnection == nullptr)
         {
-            activationCount = ++get_xsapi_singleton()->s_rtaActiveSocketCountPerUser[m_userContext->xbox_user_id()];
+            activationCount = ++xsapiSingleton->m_rtaActiveSocketCountPerUser[xuid];
 
-            LOGS_DEBUG << "websocket count is at " << get_xsapi_singleton()->s_rtaActiveSocketCountPerUser[m_userContext->xbox_user_id()] << " for user " << m_userContext->xbox_user_id();
+            LOGS_DEBUG << "websocket count is at " << xsapiSingleton->m_rtaActiveSocketCountPerUser[xuid] << " for user " << m_userContext->xbox_user_id();
         }
 
         if (m_userContext->caller_context_type() == caller_context_type::multiplayer_manager ||
             m_userContext->caller_context_type() == caller_context_type::social_manager)
         {
-            ++get_xsapi_singleton()->s_rtaActiveManagersByUser[m_userContext->xbox_user_id()];
-            LOGS_DEBUG << "websocket manager count is at " << get_xsapi_singleton()->s_rtaActiveManagersByUser[m_userContext->xbox_user_id()] << " for user " << m_userContext->xbox_user_id();
+            ++xsapiSingleton->m_rtaActiveManagersByUser[xuid];
+            LOGS_DEBUG << "websocket manager count is at " << xsapiSingleton->m_rtaActiveManagersByUser[xuid] << " for user " << m_userContext->xbox_user_id();
         }
     }
 
@@ -69,15 +72,16 @@ real_time_activity_service::activate()
             if (!disableAsserts)
             {
 #if UNIT_TEST_SERVICES
-                std::lock_guard<std::mutex> guard(get_xsapi_singleton()->s_rtaActivationCounterLock);
-                --get_xsapi_singleton()->s_rtaActiveSocketCountPerUser[m_userContext->xbox_user_id()];
+                auto xsapiSingleton = get_xsapi_singleton();
+                std::lock_guard<std::mutex> guard(xsapiSingleton->m_rtaActivationCounterLock);
+                --xsapiSingleton->m_rtaActiveSocketCountPerUser[m_userContext->xbox_user_id()];
 #endif
                 std::stringstream msg;
                 LOGS_ERROR << "You've currently activated  " << activationCount << " websockets.";
                 LOGS_ERROR << "We recommend you don't activate more than " << MAXIMUM_WEBSOCKETS_ACTIVATIONS_ALLOWED_PER_USER << " websockets";
-                LOGS_ERROR << "You can temporarily disable the assert by calling";
-                LOGS_ERROR << "xboxLiveContext->settings()->disable_asserts_for_maximum_number_of_websockets_activated()";
-                LOGS_ERROR << "however the issue must be addressed before certification.";
+                LOG_ERROR("You can temporarily disable the assert by calling");
+                LOG_ERROR("xboxLiveContext->settings()->disable_asserts_for_maximum_number_of_websockets_activated()");
+                LOG_ERROR("however the issue must be addressed before certification.");
 
                 XSAPI_ASSERT(false);
             }
@@ -112,14 +116,14 @@ real_time_activity_service::activate()
         });
 #endif
 
-        stringstream_t endpoint;
-        endpoint << utils::create_xboxlive_endpoint(_T("rta"), m_appConfig, _T("wss"));
-        endpoint << _T("/connect");
+        xsapi_internal_stringstream endpoint;
+        endpoint << utils::create_xboxlive_endpoint("rta", xbox_live_app_config_internal::get_app_config_singleton(), "wss");
+        endpoint << "/connect";
 
         m_webSocketConnection = std::make_shared<web_socket_connection>(
             m_userContext,
             endpoint.str(),
-            _T("rta.xboxlive.com.V2"),
+            "rta.xboxlive.com.V2",
             m_xboxLiveContextSettings
             );
 
@@ -133,7 +137,7 @@ real_time_activity_service::activate()
             }
         });
 
-        m_webSocketConnection->set_received_handler([thisWeakPtr](string_t message)
+        m_webSocketConnection->set_received_handler([thisWeakPtr](xsapi_internal_string message)
         {
             std::shared_ptr<real_time_activity_service> pThis(thisWeakPtr.lock());
             if (pThis != nullptr)
@@ -149,33 +153,34 @@ real_time_activity_service::activate()
 void
 real_time_activity_service::deactivate()
 {
-    if (get_xsapi_singleton(false) != nullptr) // skip this if process is shutting down
+    std::shared_ptr<xsapi_singleton> xsapiSingleton = get_xsapi_singleton(false);
+    if (xsapiSingleton != nullptr) // skip this if process is shutting down
     {
-        std::lock_guard<std::mutex> guard(get_xsapi_singleton()->s_rtaActivationCounterLock);
+        std::lock_guard<std::mutex> guard(xsapiSingleton->m_rtaActivationCounterLock);
         auto& xuid = m_userContext->xbox_user_id();
         if (m_userContext->caller_context_type() == caller_context_type::title)
         {
-            if (m_webSocketConnection != nullptr && get_xsapi_singleton()->s_rtaActiveSocketCountPerUser[xuid] > 0)
+            if (m_webSocketConnection != nullptr && xsapiSingleton->m_rtaActiveSocketCountPerUser[xuid] > 0)
             {
-                --get_xsapi_singleton()->s_rtaActiveSocketCountPerUser[xuid];
+                --xsapiSingleton->m_rtaActiveSocketCountPerUser[xuid];
             }
         }
-        else if(get_xsapi_singleton()->s_rtaActiveManagersByUser[xuid] != 0)
+        else if(xsapiSingleton->m_rtaActiveManagersByUser[xuid] != 0)
         {
-            auto counter = --get_xsapi_singleton()->s_rtaActiveManagersByUser[xuid];
+            auto counter = --xsapiSingleton->m_rtaActiveManagersByUser[xuid];
             if (counter > 0 )
             {
                 // Since the Managers share the RTA service, only close the socket on the last deactivate() call for that user.
                 return;
             }
-            --get_xsapi_singleton()->s_rtaActiveSocketCountPerUser[xuid];
-            LOGS_DEBUG << "websocket count is at " << get_xsapi_singleton()->s_rtaActiveSocketCountPerUser[xuid] << " for user " << xuid;
-            get_xsapi_singleton()->s_rtaActiveManagersByUser.erase(xuid);
+            --xsapiSingleton->m_rtaActiveSocketCountPerUser[xuid];
+            LOGS_DEBUG << "websocket count is at " << xsapiSingleton->m_rtaActiveSocketCountPerUser[xuid] << " for user " << xuid;
+            xsapiSingleton->m_rtaActiveManagersByUser.erase(xuid);
         }
          
-        if (get_xsapi_singleton()->s_rtaActiveSocketCountPerUser[xuid] == 0)
+        if (xsapiSingleton->m_rtaActiveSocketCountPerUser[xuid] == 0)
         {
-            get_xsapi_singleton()->s_rtaActiveSocketCountPerUser.erase(xuid);
+            xsapiSingleton->m_rtaActiveSocketCountPerUser.erase(xuid);
         }
     }
 
@@ -459,10 +464,10 @@ real_time_activity_service::trigger_connection_state_changed_event(
 
 void
 real_time_activity_service::on_socket_message_received(
-    _In_ const string_t& message
+    _In_ const xsapi_internal_string& message
     )
 {
-    auto msgJson = web::json::value::parse(message);
+    auto msgJson = web::json::value::parse(utils::string_t_from_internal_string(message));
     real_time_activity_message_type messageType = static_cast<real_time_activity_message_type>(msgJson[0].as_integer());
 
     switch (messageType)
@@ -563,7 +568,7 @@ real_time_activity_service::complete_subscribe(
     }
     else
     {
-        LOG_ERROR("No subscription found that matches recieved message");
+        LOG_ERROR("No subscription found that matches received message");
     }
 }
 
@@ -606,7 +611,7 @@ real_time_activity_service::_Add_subscription(
     {
         return xbox_live_result<void>(
             xbox_live_error_code::invalid_argument,
-            "The webscoket has been deactivated. Call activate to reconnect."
+            "The websocket has been deactivated. Call activate to reconnect."
             );
     }
 
@@ -635,18 +640,7 @@ real_time_activity_service::submit_subscriptions()
         request[1] = sequenceNumber;
         request[2] = web::json::value(subscription->resource_uri());
 
-        m_webSocketConnection->send(request.serialize())
-        .then([](task<void> t)
-        {
-            try
-            {
-                t.get();
-            }
-            catch (...)
-            {
-                // Throws this exception on failure to send, our retry logic once the websocket comes back online will resend
-            }
-        });
+        m_webSocketConnection->send(utils::internal_string_from_string_t(request.serialize()));
     }
 }
 
@@ -683,17 +677,7 @@ real_time_activity_service::_Remove_subscription(
             request[1] = sequenceNumber;
             request[2] = subscriptionId;
 
-            auto asyncOp = m_webSocketConnection->send(request.serialize())
-                .then([subscriptionIter](task<void> t)
-            {
-                try
-                {
-                    t.get();
-                }
-                catch (const web::websockets::client::websocket_exception&)
-                {
-                }
-            });
+            m_webSocketConnection->send(utils::internal_string_from_string_t(request.serialize()));
         }
     }
     else if(subscription->state() == real_time_activity_subscription_state::pending_subscribe)
@@ -749,21 +733,7 @@ real_time_activity_service::_Close_websocket()
     if (socketToClean != nullptr)
     {
         socketToClean->set_received_handler(nullptr);
-
-        socketToClean->close().then([socketToClean](task<void> t)
-        {
-            try
-            {
-                // Hold the reference to the shared point, so it won't deconsturct  
-                auto socketConnectionSharedCopy = socketToClean;
-                t.get();
-                socketConnectionSharedCopy = nullptr;
-            }
-            catch (...)
-            {
-            }
-        });
-
+        socketToClean->close();
         socketToClean->set_connection_state_change_handler(nullptr);
     }
 }
@@ -782,18 +752,20 @@ real_time_activity_service::convert_rta_error_code_to_xbox_live_error_code(
     }
 }
 
-std::unordered_map<string_t, uint32_t> 
+std::unordered_map<xsapi_internal_string, uint32_t> 
 real_time_activity_service::_Rta_activation_map()
 {
-    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->s_rtaActivationCounterLock);
-    return get_xsapi_singleton(true)->s_rtaActiveSocketCountPerUser;
+    auto xsapiSingleton = get_xsapi_singleton();
+    std::lock_guard<std::mutex> guard(xsapiSingleton->m_rtaActivationCounterLock);
+    return xsapiSingleton->m_rtaActiveSocketCountPerUser;
 }
 
-std::unordered_map<string_t, uint32_t> 
+std::unordered_map<xsapi_internal_string, uint32_t>
 real_time_activity_service::_Rta_manager_activation_map()
 {
-    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->s_rtaActivationCounterLock);
-    return get_xsapi_singleton(true)->s_rtaActiveManagersByUser;
+    auto xsapiSingleton = get_xsapi_singleton();
+    std::lock_guard<std::mutex> guard(xsapiSingleton->m_rtaActivationCounterLock);
+    return xsapiSingleton->m_rtaActiveManagersByUser;
 }
 
 

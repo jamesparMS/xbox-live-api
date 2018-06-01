@@ -123,7 +123,6 @@ private:
     context_t m_context;
     pending_request_type m_requestType;
     uint32_t m_identifier;
-    static volatile long s_uniqueIndentifier;
 
     // Local user properties
     std::shared_ptr<multiplayer_local_user> m_localUser;
@@ -168,7 +167,7 @@ public:
         _In_ const xbox::services::multiplayer::multiplayer_session_change_event_args& args
         );
 
-    pplx::task<xbox_live_result<void>> commit_synchronized_changes(
+    pplx::task<xbox_live_result<std::shared_ptr<multiplayer_session>>> commit_synchronized_changes(
         _In_ std::shared_ptr<xbox::services::multiplayer::multiplayer_session> sessionToCommit
         );
 
@@ -303,7 +302,7 @@ public:
 
     void set_local_member_properties_to_remote_session(
         _In_ const std::shared_ptr<xbox::services::multiplayer::manager::multiplayer_local_user>& localUser,
-        _In_ const std::map<string_t, web::json::value>& localUserMap,
+        _In_ const std::map<string_t, web::json::value>& localUsersMap,
         _In_ const string_t& localUserConnectionAddress
         );
 
@@ -439,11 +438,13 @@ public:
     bool is_request_in_progress();
 
     pplx::task<xbox_live_result<std::vector<multiplayer_event>>> commit_pending_lobby_changes(
+        _In_ std::vector<string_t> xuidsInOrder,
         _In_ bool joinByHandleId,
         _In_ xbox::services::multiplayer::multiplayer_session_reference sessionRef = xbox::services::multiplayer::multiplayer_session_reference()
         );
 
     pplx::task<xbox_live_result<std::vector<multiplayer_event>>> commit_lobby_changes(
+        _In_ std::vector<string_t> xuidsInOrder,
         _In_ std::shared_ptr<xbox::services::multiplayer::multiplayer_session> lobbySessionToCommit
         );
 
@@ -550,6 +551,7 @@ private:
         );
 
     xbox_live_result<std::vector<multiplayer_event>> commit_lobby_changes_helper(
+        _In_ std::vector<string_t> xuids,
         _In_ std::shared_ptr<xbox::services::multiplayer::multiplayer_session> lobbySessionToCommit
         );
 
@@ -828,7 +830,7 @@ public:
         _In_ const multiplayer_session_reference& sessionRef,
         _In_ std::vector<xbox_live_user_t> users
         );
-#if !XSAPI_U
+#if UWP_API || TV_API || UNIT_TEST_SERVICES
     xbox_live_result<void> join_lobby(
         _In_ Windows::ApplicationModel::Activation::IProtocolActivatedEventArgs^ eventArgs,
         _In_ std::vector<xbox_live_user_t> users

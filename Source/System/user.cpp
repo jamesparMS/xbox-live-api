@@ -36,43 +36,40 @@ std::shared_ptr<user_impl> sign_out_completed_event_args::_Internal_user()
     return m_user_impl;
 }
 
-#if XSAPI_SERVER
+#if defined(_WIN32)
 
-pplx::task<xbox_live_result<void>> xbox_live_user::signin(
-    _In_ std::shared_ptr<xbox_live_server> server,
-    _In_ const string_t& user_delegation_ticket
-    )
+pplx::task<xbox_live_result<sign_in_result>> xbox_live_user::signin_helper(bool showUI, bool forceRefresh)
 {
-    if (!server->is_signed_in())
+    task_completion_event<xbox_live_result<sign_in_result>> tce;
+
+    m_user_impl->sign_in_impl(showUI, forceRefresh, get_xsapi_singleton()->m_asyncQueue,
+        [tce](xbox_live_result<sign_in_result> result)
     {
-        return pplx::task_from_result(xbox_live_result<void>(xbox_live_error_code::runtime_error, "xbox_live_server need to sign in first"));
-    }
-
-    return m_user_impl->sign_in_impl(user_delegation_ticket, false);
+        tce.set(result);
+    });
+    return task<xbox_live_result<sign_in_result>>(tce);
 }
-
-#elif defined(_WIN32)
 
 pplx::task<xbox_live_result<sign_in_result>> xbox_live_user::signin()
 {
-    return m_user_impl->sign_in_impl(true, false);
+    return signin_helper(true, false);
 }
 
 pplx::task<xbox_live_result<sign_in_result>> xbox_live_user::signin_silently()
 {
-    return m_user_impl->sign_in_impl(false, false);
+    return signin_helper(false, false);
 }
 
 #endif
 
 void xbox_live_user::set_title_telemetry_session_id(_In_ const string_t& sessionId)
 {
-    m_user_impl->set_title_telemetry_session_id(sessionId);
+    m_user_impl->set_title_telemetry_session_id(utils::internal_string_from_string_t(sessionId));
 }
 
-const string_t& xbox_live_user::_Title_telemetry_session_id()
+string_t xbox_live_user::_Title_telemetry_session_id()
 {
-    return m_user_impl->title_telemetry_session_id();
+    return utils::string_t_from_internal_string(m_user_impl->title_telemetry_session_id());
 }
 
 #if defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_APP
@@ -80,14 +77,14 @@ pplx::task<xbox_live_result<sign_in_result>>
 xbox_live_user::signin(_In_opt_ Platform::Object^ coreDispatcherObj)
 {
     xbox_live_context_settings::_Set_dispatcher(coreDispatcherObj);
-    return m_user_impl->sign_in_impl(true, false);
+    return signin_helper(true, false);
 }
 
 pplx::task<xbox_live_result<sign_in_result>> 
 xbox_live_user::signin_silently(_In_opt_ Platform::Object^ coreDispatcherObj)
 {
     xbox_live_context_settings::_Set_dispatcher(coreDispatcherObj);
-    return m_user_impl->sign_in_impl(false, false);
+    return signin_helper(false, false);
 }
 
 xbox_live_user::xbox_live_user(Windows::System::User^ systemUser)
@@ -102,25 +99,42 @@ xbox_live_user::xbox_live_user()
     m_user_impl = user_factory::create_user_impl(nullptr);
 }
 
-const string_t& xbox_live_user::xbox_user_id() const
+string_t xbox_live_user::xbox_user_id() const
 {
-    return m_user_impl->xbox_user_id();
+    return utils::string_t_from_internal_string(m_user_impl->xbox_user_id());
 }
 
-const string_t& xbox_live_user::gamertag() const
+string_t xbox_live_user::gamertag() const
 {
-    return m_user_impl->gamertag();
+    return utils::string_t_from_internal_string(m_user_impl->gamertag());
 }
 
-const string_t& xbox_live_user::age_group() const
+string_t xbox_live_user::age_group() const
 {
-    return m_user_impl->age_group();
+    return utils::string_t_from_internal_string(m_user_impl->age_group());
 }
 
-const string_t& xbox_live_user::privileges() const
+string_t xbox_live_user::privileges() const
 {
-    return m_user_impl->privileges();
+    return utils::string_t_from_internal_string(m_user_impl->privileges());
 }
+
+#if XSAPI_U
+const string_t& xbox_live_user::user_settings_restrictions() const
+{
+    return m_user_impl->user_settings_restrictions();
+}
+
+const string_t& xbox_live_user::user_enforcement_restrictions() const
+{
+    return m_user_impl->user_enforcement_restrictions();
+}
+
+const string_t& xbox_live_user::user_title_restrictions() const
+{
+    return m_user_impl->user_title_restrictions();
+}
+#endif
 
 std::shared_ptr<auth_config> xbox_live_user::auth_config()
 {
@@ -133,9 +147,9 @@ bool xbox_live_user::is_signed_in() const
 }
 
 #if WINAPI_FAMILY && WINAPI_FAMILY==WINAPI_FAMILY_APP
-const string_t& xbox_live_user::web_account_id() const
+string_t xbox_live_user::web_account_id() const
 {
-    return m_user_impl->web_account_id();
+    return utils::string_t_from_internal_string(m_user_impl->web_account_id());
 }
 
 Windows::System::User^ xbox_live_user::windows_system_user() const
@@ -151,7 +165,19 @@ xbox_live_user::get_token_and_signature(
     _In_ const string_t& headers
     )
 {
-    return m_user_impl->get_token_and_signature(httpMethod, url, headers);
+    task_completion_event<xbox_live_result<token_and_signature_result>> tce;
+
+    m_user_impl->get_token_and_signature(
+        utils::internal_string_from_string_t(httpMethod),
+        utils::internal_string_from_string_t(url),
+        utils::internal_string_from_string_t(headers),
+        nullptr,
+        [tce](xbox_live_result<std::shared_ptr<token_and_signature_result_internal>> result)
+    {
+        tce.set(CREATE_EXTERNAL_XBOX_LIVE_RESULT(token_and_signature_result, result));
+    });
+
+    return task<xbox_live_result<token_and_signature_result>>(tce);
 }
 
 pplx::task<xbox::services::xbox_live_result<token_and_signature_result> >
@@ -162,7 +188,20 @@ xbox_live_user::get_token_and_signature(
     _In_opt_ const string_t& requestBodyString
     )
 {
-    return m_user_impl->get_token_and_signature(httpMethod, url, headers, requestBodyString);
+    task_completion_event<xbox_live_result<token_and_signature_result>> tce;
+
+    m_user_impl->get_token_and_signature(
+        utils::internal_string_from_string_t(httpMethod),
+        utils::internal_string_from_string_t(url),
+        utils::internal_string_from_string_t(headers),
+        utils::internal_string_from_string_t(requestBodyString),
+        nullptr,
+        [tce](xbox_live_result<std::shared_ptr<token_and_signature_result_internal>> result)
+    {
+        tce.set(CREATE_EXTERNAL_XBOX_LIVE_RESULT(token_and_signature_result, result));
+    });
+
+    return task<xbox_live_result<token_and_signature_result>>(tce);
 }
 
 pplx::task<xbox::services::xbox_live_result<token_and_signature_result> >
@@ -172,7 +211,20 @@ xbox_live_user::get_token_and_signature_array(
     _In_ const string_t& headers,
     _In_ const std::vector<unsigned char>& requestBodyArray)
 {
-    return m_user_impl->get_token_and_signature_array(httpMethod, url, headers, requestBodyArray);
+    task_completion_event<xbox_live_result<token_and_signature_result>> tce;
+
+    m_user_impl->get_token_and_signature(
+        utils::internal_string_from_string_t(httpMethod),
+        utils::internal_string_from_string_t(url),
+        utils::internal_string_from_string_t(headers),
+        utils::internal_vector_from_std_vector(requestBodyArray),
+        nullptr,
+        [tce](xbox_live_result<std::shared_ptr<token_and_signature_result_internal>> result)
+    {
+        tce.set(CREATE_EXTERNAL_XBOX_LIVE_RESULT(token_and_signature_result, result));
+    });
+
+    return task<xbox_live_result<token_and_signature_result>>(tce);
 }
 
 function_context

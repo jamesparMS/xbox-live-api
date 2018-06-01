@@ -8,17 +8,15 @@
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN
 
-static XBOX_LIVE_NAMESPACE::system::xbox_live_mutex g_serviceLoggerSingletonLock;
-static std::shared_ptr<service_call_logger> g_serviceLoggerSingleton;
-
 std::shared_ptr<service_call_logger> service_call_logger::get_singleton_instance()
 {
-    std::lock_guard<std::mutex> guard(g_serviceLoggerSingletonLock.get());
-    if (g_serviceLoggerSingleton == nullptr)
+    auto xsapiSingleton = xbox::services::get_xsapi_singleton();
+    std::lock_guard<std::mutex> guard(xsapiSingleton->m_singletonLock);
+    if (xsapiSingleton->m_serviceLoggerSingleton == nullptr)
     {
-        g_serviceLoggerSingleton = std::shared_ptr<service_call_logger>(new service_call_logger());
+        xsapiSingleton->m_serviceLoggerSingleton = std::shared_ptr<service_call_logger>(new service_call_logger());
     }
-    return g_serviceLoggerSingleton;
+    return xsapiSingleton->m_serviceLoggerSingleton;
 }
 
 service_call_logger::service_call_logger() :
@@ -53,7 +51,7 @@ void service_call_logger::disable()
     m_isEnabled = false;
     if(m_fileStream.is_open())
     {
-        m_fileLocation = _T("");
+        m_fileLocation = "";
         m_fileStream.close();
     }
 }
@@ -63,7 +61,7 @@ bool service_call_logger::is_enabled()
     return m_isEnabled;
 }
 
-void service_call_logger::log(_In_ const string_t& item)
+void service_call_logger::log(_In_ const xsapi_internal_string& item)
 {
     if (m_isEnabled)
     {
@@ -77,7 +75,7 @@ void service_call_logger::log(_In_ const string_t& item)
     }
 }
 
-string_t service_call_logger::file_location()
+xsapi_internal_string service_call_logger::file_location()
 {
     return m_fileLocation;
 }
@@ -98,7 +96,7 @@ void service_call_logger::create_log_file()
         stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond);
 #elif UWP_API
     Windows::Storage::ApplicationData^ currentAppData = Windows::Storage::ApplicationData::Current;
-    const string_t fileDir = currentAppData->TemporaryFolder->Path->Data();
+    const xsapi_internal_wstring fileDir = currentAppData->TemporaryFolder->Path->Data();
 
     swprintf_s(fileLocation, _T("%s\\%s-%04d%02d%02d-%02d%02d%02d.csv"),
         fileDir.c_str(),
@@ -112,9 +110,9 @@ void service_call_logger::create_log_file()
         stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond);
 #endif
 
-    m_fileLocation = fileLocation;
+    m_fileLocation = utils::internal_string_from_string_t(fileLocation);
 
-    m_fileStream.open(m_fileLocation, std::ios_base::app | std::ios_base::out);
+    m_fileStream.open(m_fileLocation.data(), std::ios_base::app | std::ios_base::out);
 
     if (!m_fileStream.is_open())
     {
@@ -123,19 +121,16 @@ void service_call_logger::create_log_file()
     }
 }
 #endif
-void service_call_logger::add_data_to_file(_In_ const string_t& data)
+void service_call_logger::add_data_to_file(_In_ const xsapi_internal_string& data)
 {
-    // Json string is all ansi, so store in a more compact format
-    std::string jsonAnsi(data.begin(), data.end());
-    
     if (m_fileStream.is_open())
     {
-        m_fileStream << jsonAnsi.c_str();
+        m_fileStream << data.c_str();
         m_fileStream.flush();
     }
     else
     {
-        LOGS_ERROR << "WriteFile failed.Path '" << m_fileLocation << "'; Contents: '" << jsonAnsi << "'";
+        LOGS_ERROR << "WriteFile failed.Path '" << m_fileLocation << "'; Contents: '" << data << "'";
     }
 }
 

@@ -3,6 +3,7 @@
 
 #include "pch.h"
 #include "xsapi/system.h"
+#include "xsapi/social_manager.h"
 #if XSAPI_A
 #include "Logger/android/logcat_output.h"
 #else
@@ -12,25 +13,76 @@
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_SYSTEM_CPP_BEGIN
 
-std::shared_ptr<xbox_live_services_settings> xbox_live_services_settings::get_singleton_instance()
+std::shared_ptr<xbox_live_services_settings> xbox_live_services_settings::get_singleton_instance(_In_ bool createIfRequired)
 {
-    std::shared_ptr<xsapi_singleton> xsapiSingleton = get_xsapi_singleton();
-    
-    std::lock_guard<std::mutex> guard(xsapiSingleton->s_singletonLock);
-    if (xsapiSingleton->s_xboxServiceSettingsSingleton == nullptr)
+    std::shared_ptr<xsapi_singleton> xsapiSingleton = get_xsapi_singleton(createIfRequired);
+    if (xsapiSingleton == nullptr)
     {
-        xsapiSingleton->s_xboxServiceSettingsSingleton = std::shared_ptr<xbox_live_services_settings>(new xbox_live_services_settings());
+        return nullptr;
     }
-    return xsapiSingleton->s_xboxServiceSettingsSingleton;
+
+    {
+        std::lock_guard<std::mutex> guard(xsapiSingleton->m_serviceSettingsLock);
+        if (xsapiSingleton->m_xboxServiceSettingsSingleton == nullptr)
+        {
+            xsapiSingleton->m_xboxServiceSettingsSingleton = std::shared_ptr<xbox_live_services_settings>(new xbox_live_services_settings());
+        }
+        return xsapiSingleton->m_xboxServiceSettingsSingleton;
+    }
 }
 
 xbox_live_services_settings::xbox_live_services_settings() :
-    m_pMemAllocHook(nullptr),
-    m_pMemFreeHook(nullptr),
+    m_pCustomMemAllocHook(nullptr),
+    m_pCustomMemFreeHook(nullptr),
     m_loggingHandlersCounter(0),
     m_wnsHandlersCounter(0),
     m_traceLevel(xbox_services_diagnostics_trace_level::off)
 {
+}
+
+void *custom_mem_alloc_wrapper(_In_ size_t size, _In_ uint32_t memoryType)
+{
+    UNREFERENCED_PARAMETER(memoryType);
+    auto xboxLiveServiceSettings = xbox::services::system::xbox_live_services_settings::get_singleton_instance();
+    if (xboxLiveServiceSettings == nullptr || xboxLiveServiceSettings->m_pCustomMemAllocHook == nullptr)
+    {
+        XSAPI_ASSERT(true && L"Custom mem hook function not set!");
+        return nullptr;
+    }
+    else
+    {
+        try
+        {
+            return xbox::services::system::xbox_live_services_settings::get_singleton_instance()->m_pCustomMemAllocHook(size);
+        }
+        catch (...)
+        {
+            LOG_ERROR("mem_alloc callback failed.");
+            return nullptr;
+        }
+    }
+}
+
+void custom_mem_free_wrapper(_In_ void *pointer, _In_ uint32_t memoryType)
+{
+    UNREFERENCED_PARAMETER(memoryType);
+    auto xboxLiveServiceSettings = xbox::services::system::xbox_live_services_settings::get_singleton_instance(false);
+    if (xboxLiveServiceSettings == nullptr || xboxLiveServiceSettings->m_pCustomMemFreeHook == nullptr)
+    {
+        XSAPI_ASSERT(true && L"Custom mem hook function not set!");
+        return;
+    }
+    else
+    {
+        try
+        {
+            return xboxLiveServiceSettings->m_pCustomMemFreeHook(pointer);
+        }
+        catch (...)
+        {
+            LOG_ERROR("mem_free callback failed.");
+        }
+    }
 }
 
 void xbox_live_services_settings::set_memory_allocation_hooks(
@@ -44,8 +96,13 @@ void xbox_live_services_settings::set_memory_allocation_hooks(
         THROW_CPP_INVALIDARGUMENT_IF(memAllocHandler == nullptr || memFreeHandler == nullptr);
     }
 
-    m_pMemAllocHook = memAllocHandler;
-    m_pMemFreeHook = memFreeHandler;
+    m_pCustomMemAllocHook = memAllocHandler;
+    m_pCustomMemFreeHook = memFreeHandler;
+
+    g_pMemAllocHook = m_pCustomMemAllocHook == nullptr ? nullptr : custom_mem_alloc_wrapper;
+    g_pMemFreeHook = m_pCustomMemFreeHook == nullptr ? nullptr : custom_mem_free_wrapper;
+
+    HCMemSetFunctions(g_pMemAllocHook, g_pMemFreeHook);
 }
 
 function_context xbox_live_services_settings::add_logging_handler(_In_ std::function<void(xbox_services_diagnostics_trace_level, const std::string&, const std::string&)> handler)
@@ -95,6 +152,7 @@ xbox_services_diagnostics_trace_level xbox_live_services_settings::diagnostics_t
 void xbox_live_services_settings::set_diagnostics_trace_level(_In_ xbox_services_diagnostics_trace_level value)
 {
     m_traceLevel = value;
+    social::manager::social_manager::get_singleton_instance()->set_diagnostics_trace_level(value);
     set_log_level_from_diagnostics_trace_level();
 }
 
@@ -119,7 +177,11 @@ void xbox_live_services_settings::_Raise_logging_event(_In_ xbox_services_diagno
     }
 }
 
-void xbox_live_services_settings::_Raise_wns_event(_In_ const string_t& xbox_user_id, _In_ const string_t& notification_type, const string_t& content)
+void xbox_live_services_settings::_Raise_wns_event(
+    _In_ const string_t& xbox_user_id, 
+    _In_ const string_t& notification_type, 
+    _In_ const string_t& content
+)
 {
     std::lock_guard<std::mutex> lock(m_wnsEventLock);
 

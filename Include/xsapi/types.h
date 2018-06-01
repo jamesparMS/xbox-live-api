@@ -50,11 +50,11 @@
 #if defined _WIN32
   #ifdef _NO_XSAPIIMP
     #define _XSAPIIMP
-	#if _MSC_VER >= 1900
-	    #define _XSAPIIMP_DEPRECATED __declspec(deprecated)
-	#else
-	    #define _XSAPIIMP_DEPRECATED
-	#endif
+    #if _MSC_VER >= 1900
+        #define _XSAPIIMP_DEPRECATED __declspec(deprecated)
+    #else
+        #define _XSAPIIMP_DEPRECATED
+    #endif
   #else
     #ifdef _XSAPIIMP_EXPORT
       #define _XSAPIIMP __declspec(dllexport)
@@ -103,14 +103,41 @@ typedef std::chrono::steady_clock chrono_clock_t;
 #endif
 
 // Forward declarations
-// Forward declarations
 namespace xbox {
     namespace services {
         class user_context;
         class xbox_live_context_settings;
         class local_config;
+        namespace system {
+            class xbox_live_user;
+        }
     }
 }
+
+#if !XSAPI_CPP || UNIT_TEST_SERVICES
+namespace Microsoft {
+    namespace Xbox {
+        namespace Services {
+            namespace System {
+                ref class XboxLiveUser;
+            }
+        }
+    }
+}
+#endif
+
+#if TV_API
+#define XSAPI_XDK_AUTH 1
+#endif
+#if TV_API && defined(XSAPI_CPPWINRT)
+#define XSAPI_XDK_AUTH_WITH_CPPWINRT 1
+#endif
+#if !TV_API && XSAPI_CPP // Non-XDK C++
+#define XSAPI_NONXDK_CPP_AUTH 1
+#endif
+#if !TV_API && (!XSAPI_CPP || UNIT_TEST_SERVICES) // Non-XDK WinRT
+#define XSAPI_NONXDK_WINRT_AUTH 1
+#endif
 
 #if !TV_API
 // SSL client certificate context
@@ -126,13 +153,23 @@ typedef boost::asio::ssl::context* cert_context;
 #endif
 
 #if UWP_API || UNIT_TEST_SERVICES
-typedef Windows::System::User^ user_creation_context;
+    typedef Windows::System::User^ user_creation_context;
 #else
-typedef void* user_creation_context;
+    typedef void* user_creation_context;
 #endif
 
-#if TV_API | XBOX_UWP
-typedef  Windows::Xbox::System::User^ xbox_live_user_t;
+#if !XSAPI_CPP || UNIT_TEST_SERVICES
+    #if TV_API
+        typedef Windows::Xbox::System::User^ XboxLiveUser_t;
+    #else
+        typedef Microsoft::Xbox::Services::System::XboxLiveUser^ XboxLiveUser_t;
+    #endif
+#endif
+
+#if TV_API
+    typedef  Windows::Xbox::System::User^ xbox_live_user_t;
+#else
+    typedef std::shared_ptr<xbox::services::system::xbox_live_user> xbox_live_user_t;
 #endif
 
 #if defined(XSAPI_CPPWINRT)
@@ -143,19 +180,9 @@ inline Windows::Xbox::System::User^ convert_user_to_cppcx(_In_ const winrt::Wind
     return reinterpret_cast<Windows::Xbox::System::User^>(abiUser);
 }
 
-#if XBOX_UWP
-inline Windows::ApplicationModel::Activation::IProtocolActivatedEventArgs^ convert_eventargs_to_cppcx(
-    _In_ const winrt::Windows::ApplicationModel::Activation::IProtocolActivatedEventArgs& eventArgs
-)
-{
-    winrt::ABI::Windows::ApplicationModel::Activation::IProtocolActivatedEventArgs* abiEventArgs = winrt::get_abi(eventArgs);
-    return reinterpret_cast<Windows::ApplicationModel::Activation::IProtocolActivatedEventArgs^>(abiEventArgs);
-}
-#endif
-
 inline std::vector<Windows::Xbox::System::User^> convert_user_vector_to_cppcx(
     _In_ const std::vector<winrt::Windows::Xbox::System::User>& users
-)
+    )
 {
     std::vector<Windows::Xbox::System::User^> cppCxUsers;
     for (winrt::Windows::Xbox::System::User u : users)
@@ -186,8 +213,6 @@ inline std::vector<winrt::Windows::Xbox::System::User> convert_user_vector_to_cp
 #endif
 #endif
 
-
-#define XBOX_LIVE_NAMESPACE xbox::services
 
 #define NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN                     namespace xbox { namespace services {
 #define NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_END                       }}
@@ -307,3 +332,7 @@ inline std::vector<winrt::Windows::Xbox::System::User> convert_user_vector_to_cp
 #define NAMESPACE_MICROSOFT_XBOX_SERVICES_PLAYER_STATE_BEGIN       NAMESPACE_MICROSOFT_XBOX_SERVICES_BEGIN namespace PlayerState {
 #define NAMESPACE_MICROSOFT_XBOX_SERVICES_PLAYER_STATE_END         NAMESPACE_MICROSOFT_XBOX_SERVICES_END }
 
+#define NAMESPACE_MICROSOFT_XBOX_SERVICES_CLUBS_CPP_BEGIN          NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN namespace clubs {
+#define NAMESPACE_MICROSOFT_XBOX_SERVICES_CLUBS_CPP_END            NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_END }
+#define NAMESPACE_MICROSOFT_XBOX_SERVICES_CLUBS_BEGIN              NAMESPACE_MICROSOFT_XBOX_SERVICES_BEGIN namespace Clubs {
+#define NAMESPACE_MICROSOFT_XBOX_SERVICES_CLUBS_END                NAMESPACE_MICROSOFT_XBOX_SERVICES_END }

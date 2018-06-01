@@ -80,6 +80,7 @@ include_directories(
     $(ProjectDir)../../Source/Services/Misc
     $(ProjectDir)../../Source/Services/Social/Manager
     $(ProjectDir)../../Source/Services/RealTimeActivity
+    $(ProjectDir)../../Source/Services/Clubs
     $(ProjectDir)../../Source/Shared
     $(ProjectDir)../../Source/Shared/WinRT
     $(ProjectDir)../../include
@@ -120,8 +121,24 @@ set(Public_Source_Files
     ../../include/xsapi/tournaments.h
     ../../include/xsapi/xbox_live_app_config.h
     ../../include/xsapi/xbox_live_context_settings.h
+    ../../include/xsapi/clubs.h
     )
-	
+
+set(Public_Source_Files_C
+    ../../include/xsapi-c/achievements_c.h
+    ../../include/xsapi-c/errors_c.h
+    ../../include/xsapi-c/presence_c.h
+    ../../include/xsapi-c/profile_c.h
+    ../../include/xsapi-c/services_c.h
+    ../../include/xsapi-c/social_c.h
+    ../../include/xsapi-c/social_manager_c.h
+    ../../include/xsapi-c/pal.h
+    ../../include/xsapi-c/xbox_live_app_config_c.h
+    ../../include/xsapi-c/xbox_live_context_c.h
+    ../../include/xsapi-c/xbox_live_context_settings_c.h
+    ../../include/xsapi-c/xbox_live_global_c.h
+    )
+
 message(STATUS "Test")
 
 if( UNITTEST )
@@ -154,7 +171,7 @@ else()
 endif()
 
 set(Common_Source_Files
-    ../../Source/Services/Common/Desktop/XboxLiveContext_Desktop.cpp
+    ../../Source/Services/Common/xbox_live_context.cpp
     ../../Source/Services/Common/xbox_live_context_impl.cpp
     ../../Source/Services/Common/pch_Common.h
     ../../Source/Services/Common/xbox_live_context_impl.h
@@ -173,7 +190,6 @@ else()
         ../../Source/Services/Common/Desktop/pch.h
         )
 endif()
-
 
 set(UWP_System_Source_Files
     ../../Source/System/token_and_signature_result.cpp
@@ -215,17 +231,32 @@ if( UNITTEST )
         Shared_Logger_Source_Files	
         ../../Source/Shared/Logger/console_output.cpp
         ../../Source/Shared/Logger/console_output.h
-        )		
+        )
 endif()
+
+set(UWP_Shared_Source_Files
+    ../../Source/Shared/user_context_cpp.cpp
+    ../../Source/Shared/telemetry.h
+    ../../Source/Shared/telemetry.cpp
+    ../../Source/Shared/WinRT/local_config_winrt.cpp
+    )
+
+set(WinRT_Shared_Source_Files
+    ../../Source/Shared/user_context_winrt.cpp
+    )
+
+set(XDK_Shared_Source_Files
+    ../../Source/Shared/user_context_xdk.cpp
+    )
 
 set(Shared_Source_Files
 	../../Source/Shared/WinRT/Event_WinRT.cpp
 	../../Source/Shared/WinRT/Event_WinRT.h
     ../../Source/Shared/http_call_impl.cpp
     ../../Source/Shared/http_call_response.cpp
-    ../../Source/Shared/http_client.cpp
     ../../Source/Shared/user_context.cpp
     ../../Source/Shared/utils.cpp
+    ../../Source/Shared/xbox_service_call_routed_event_args_internal.h
     ../../Source/Shared/xbox_service_call_routed_event_args.cpp
     ../../Source/Shared/call_buffer_timer.cpp
     ../../Source/Shared/errors.cpp
@@ -241,13 +272,13 @@ set(Shared_Source_Files
     ../../Source/Shared/utils_locales.cpp
     ../../Source/Shared/web_socket_client.cpp
     ../../Source/Shared/web_socket_connection.cpp
+    ../../Source/Shared/xbox_live_app_config_internal.h
     ../../Source/Shared/xbox_live_app_config.cpp
     ../../Source/Shared/xbox_live_context_settings.cpp
     ../../Source/Shared/xbox_live_services_settings.cpp
     ../../Source/Shared/xbox_system_factory.cpp
     ../../Source/Shared/http_call_impl.h
-    ../../Source/Shared/http_call_response.h
-    ../../Source/Shared/http_client.h
+    ../../Source/Shared/http_call_response_internal.h
     ../../Source/Shared/local_config.h
     ../../Source/Shared/Shared_macros.h
     ../../Source/Shared/user_context.h
@@ -262,6 +293,8 @@ set(Shared_Source_Files
     ../../Source/Shared/web_socket_connection.h
     ../../Source/Shared/web_socket_connection_state.h
     ../../Source/Shared/xbox_system_factory.h
+    ../../Source/Shared/http_headers.h
+    ../../Source/Shared/http_call_request_message_internal.h
     )
 
 set(Misc_Source_Files
@@ -279,31 +312,29 @@ set(Misc_Source_Files
     ../../Source/Services/Misc/contextual_config_result.h
     )
 
-set(UWP_Source_Files
-    ../../Source/Shared/telemetry.h
-    ../../Source/Shared/telemetry.cpp
-    ../../Source/Services/Presence/presence_writer.cpp
+set(UWP_Misc_Source_Files    
     ../../Source/Services/Misc/UWP/title_callable_ui.cpp
     ../../Source/Services/Misc/Windows/notification_service_windows.cpp
 	../../Source/Services/Misc/notification_service.cpp
     ../../Source/Services/Misc/notification_service.h
-	../../Source/Shared/WinRT/local_config_winrt.cpp
 	)
 
 set(Achievements_Source_Files
     ../../Source/Services/Achievements/achievement.cpp
-    ../../Source/Services/Achievements/Achievements_result.cpp
     ../../Source/Services/Achievements/achievement_media_asset.cpp
     ../../Source/Services/Achievements/achievement_progression.cpp
     ../../Source/Services/Achievements/achievement_requirement.cpp
     ../../Source/Services/Achievements/achievement_reward.cpp
     ../../Source/Services/Achievements/achievement_service.cpp
+    ../../Source/Services/Achievements/achievement_service_internal.cpp
     ../../Source/Services/Achievements/achievement_time_window.cpp
     ../../Source/Services/Achievements/achievement_title_association.cpp
+    ../../Source/Services/Achievements/achievements_internal.h
+    ../../Source/Services/Achievements/achievements_result.cpp
     )
 
-set(Events_Source_Files
-    ../../Source/Services/Events/Events_service.cpp
+set(UWP_Events_Source_Files
+    ../../Source/Services/Events/events_service_uwp.cpp
     )
 
 set(Leaderboard_Source_Files
@@ -338,12 +369,16 @@ set(Presence_Source_Files
     ../../Source/Services/Presence/presence_media_record.cpp
     ../../Source/Services/Presence/presence_record.cpp
     ../../Source/Services/Presence/presence_service.cpp
-    ../../Source/Services/Presence/presence_service_impl.cpp
+    ../../Source/Services/Presence/presence_service_internal.cpp
     ../../Source/Services/Presence/presence_title_record.cpp
     ../../Source/Services/Presence/presence_title_request.cpp
     ../../Source/Services/Presence/presence_user_batch_request.cpp
     ../../Source/Services/Presence/title_presence_change_event_args.cpp
     ../../Source/Services/Presence/title_presence_change_subscription.cpp
+    )
+    
+set(UWP_Presence_Source_Files
+    ../../Source/Services/Presence/presence_writer.cpp
     )
 
 set(Gameserverplatform_Source_Files
@@ -379,14 +414,17 @@ set(Social_Source_Files
     ../../Source/Services/Social/profile_service.cpp
     ../../Source/Services/Social/reputation_feedback_request.cpp
     ../../Source/Services/Social/reputation_service.cpp
+    ../../Source/Services/Social/reputation_service_impl.cpp
     ../../Source/Services/Social/Social_service.cpp
     ../../Source/Services/Social/xbox_Social_relationship.cpp
     ../../Source/Services/Social/xbox_Social_relationship_result.cpp
     ../../Source/Services/Social/xbox_user_profile.cpp
-    ../../Source/Services/Social/Social_relationship_change_event_args.cpp
-    ../../Source/Services/Social/Social_relationship_change_subscription.cpp
-    ../../Source/Services/Social/Social_service_impl.cpp
-    ../../Source/Services/Social/Social_internal.h
+    ../../Source/Services/Social/social_relationship_change_event_args.cpp
+    ../../Source/Services/Social/social_relationship_change_subscription.cpp
+    ../../Source/Services/Social/social_service_impl.cpp
+    ../../Source/Services/Social/social_internal.h
+    ../../Source/Services/Social/profile_internal.h
+    ../../Source/Services/Social/profile_service_impl.cpp
     )
 
 set(Social_Manager_Source_Files
@@ -404,6 +442,7 @@ set(Social_Manager_Source_Files
     ../../Source/Services/Social/Manager/xbox_Social_user_group.cpp
     ../../Source/Services/Social/Manager/xbox_user_id_container.cpp
     ../../Source/Services/Social/Manager/Social_manager_internal.h
+    ../../Source/Services/Social/Manager/Social_manager_internal.cpp
     )
 
 set(Stats_Source_Files
@@ -549,7 +588,63 @@ set(Marketplace_Source_Files
 	../../Source/Services/Marketplace/inventory_items_result.cpp
 	../../Source/Services/Marketplace/inventory_service.cpp
 	)
-	
+    
+set(Clubs_Source_Files
+    ../../Source/Services/Clubs/club.cpp
+    ../../Source/Services/Clubs/club_action_settings.cpp
+    ../../Source/Services/Clubs/club_presence_counts.cpp
+    ../../Source/Services/Clubs/club_profile.cpp
+    ../../Source/Services/Clubs/club_role_record.cpp
+    ../../Source/Services/Clubs/club_roster.cpp
+    ../../Source/Services/Clubs/club_search_auto_complete.cpp
+    ../../Source/Services/Clubs/club_search_facet_result.cpp
+    ../../Source/Services/Clubs/club_user_presence_record.cpp
+    ../../Source/Services/Clubs/clubs_owned_result.cpp
+    ../../Source/Services/Clubs/clubs_search_result.cpp
+    ../../Source/Services/Clubs/clubs_serializers.cpp
+    ../../Source/Services/Clubs/clubs_serializers.h
+    ../../Source/Services/Clubs/clubs_service.cpp
+    ../../Source/Services/Clubs/clubs_service_impl.cpp
+    ../../Source/Services/Clubs/clubs_service_impl.h
+    )
+
+set(UWP_System_Source_Files_C
+    ../../Source/System/C/system_c.h
+    ../../Source/System/C/user_c.cpp
+    )
+
+set(System_Source_Files_C
+    ../../Source/System/C/user_internal_c.h
+    ../../Source/System/C/user_internal_c.cpp
+    )
+
+set(Shared_Source_Files_C
+    ../../Source/Shared/C/xbox_live_app_config_c.cpp
+    ../../Source/Shared/C/xbox_live_context_settings_c.cpp
+    )
+
+set(Common_Source_Files_C
+    ../../Source/Services/Common/C/xbox_live_context_internal_c.h
+    ../../Source/Services/Common/C/xbox_live_context_c.cpp
+    ../../Source/Services/Common/C/xbox_live_global_c.cpp
+    )
+
+set(Social_Source_Files_C
+    ../../Source/Services/Social/C/profile.cpp
+    ../../Source/Services/Social/C/social.cpp
+    )
+    
+set(Social_Manager_Source_Files_C
+    ../../Source/Services/Social/Manager/C/social_manager_c.cpp
+    )
+
+set(Achievements_Source_Files_C
+    ../../Source/Services/Achievements/C/achievements.cpp
+    ../../Source/Services/Achievements/C/achievements_internal_c.h
+    ../../Source/Services/Achievements/C/achievements_internal_c.cpp
+    )
+
+
 set(EntertainmentProfile_WinRT_Source_Files
 	../../Source/Services/EntertainmentProfile/WinRT/EntertainmentProfileListContainsItemResult_WinRT.cpp
 	../../Source/Services/EntertainmentProfile/WinRT/EntertainmentProfileListContainsItemResult_WinRT.h
@@ -1057,6 +1152,40 @@ set(System_WinRT_Source_Files
 	../../Source/System/WinRT/User_WinRT.cpp
 	../../Source/System/WinRT/User_WinRT.h
 	)
+    
+set(Clubs_WinRT_Source_Files
+    ../../Source/Services/Clubs/WinRT/Club_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/Club_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubActionSettings_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubActionSettings_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubPresenceCounts_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubPresenceCounts_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubProfile_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubProfile_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubRecommendation_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubRecommendation_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubRole_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubRoleRecord_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubRoleRecord_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubRoster_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubRoster_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubSearchAutoComplete_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubSearchAutoComplete_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubSearchFacetResult_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubSearchFacetResult_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubSetting_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubSetting_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubsOwnedResult_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubsOwnedResult_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubsSearchResult_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubsSearchResult_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubsService_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubsService_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubType_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubUserPresence_WinRT.h
+    ../../Source/Services/Clubs/WinRT/ClubUserPresenceRecord_WinRT.cpp
+    ../../Source/Services/Clubs/WinRT/ClubUserPresenceRecord_WinRT.h
+    )
 	
 set(Ship_Source_Files
     ../../Source/Services/Common/Desktop/pch.cpp
@@ -1071,6 +1200,7 @@ if( SHIP )
 		)
 else()
 	source_group("Header Files" FILES ${Public_Source_Files})
+	source_group("C Public Includes" FILES ${Public_Source_Files_C})
 	source_group("C++ Source\\System" FILES ${System_Source_Files})
 	source_group("C++ Source\\Shared" FILES ${Shared_Source_Files})
 	source_group("C++ Source\\Shared\\Logger" FILES ${Shared_Logger_Source_Files})
@@ -1091,9 +1221,11 @@ else()
 	source_group("C++ Source\\Services\\Multiplayer" FILES ${Multiplayer_Source_Files})
 	source_group("C++ Source\\Services\\Multiplayer\\Manager" FILES ${Multiplayer_Manager_Source_Files})
 	source_group("C++ Source\\Services\\Tournaments" FILES ${Tournaments_Source_Files})
+    source_group("C++ Source\\Services\\Clubs" FILES ${Clubs_Source_Files})
 
 	if( XDK OR UNITTEST )
 		message(STATUS "XDK source group")
+        source_group("C++ Source\\Shared" FILES ${XDK_Shared_Source_Files})
 		source_group("C++ Source\\Services\\EntertainmentProfile" FILES ${EntertainmentProfile_Source_Files})
 		source_group("C++ Source\\Services\\Marketplace" FILES ${Marketplace_Source_Files})
 		
@@ -1102,24 +1234,37 @@ else()
             source_group("C++ Source\\Shared\\WinRT" FILES ${XDK_WinRT_Shared_Source_Files})
 			source_group("C++ Source\\Services\\EntertainmentProfile\\WinRT" FILES ${EntertainmentProfile_WinRT_Source_Files})
 			source_group("C++ Source\\Services\\Marketplace\\WinRT" FILES ${Marketplace_WinRT_Source_Files})
-		endif()	
+		endif()	    
+        
 	else()
 		source_group("C++ Source\\System" FILES ${UWP_System_Source_Files})
-		source_group("C++ Source\\Services\\Misc" FILES ${UWP_Source_Files})
-		source_group("C++ Source\\Services\\Events" FILES ${Events_Source_Files})
-		if( WINRT OR UNITTEST )
+        source_group("C++ Source\\Shared" FILES ${UWP_Shared_Source_Files})
+        source_group("C++ Source\\Services\\Presence" FILES ${UWP_Presence_Source_Files})
+        source_group("C++ Source\\Services\\Misc" FILES ${UWP_Misc_Source_Files})
+        source_group("C++ Source\\Services\\Events" FILES ${UWP_Events_Source_Files})
+
+        if( PCWIN32 )
+            source_group("C++ Source\\Shared" FILES ${Xal_Shared_Source_Files})
+            source_group("C++ Source\\System" FILES ${Xal_System_Source_Files})
+        endif()
+
+        if( WINRT )
+            source_group("C++ Source\\Shared" FILES ${WinRT_Shared_Source_Files})
 			source_group("C++ Source\\Shared\\WinRT" FILES ${UWP_Shared_WinRT_Source_Files})
             source_group("C++ Source\\System\\WinRT" FILES ${System_WinRT_Source_Files})
             source_group("C++ Source\\Services\\Events\\WinRT" FILES ${Events_WinRT_Source_Files})
-		endif()
+        endif()
 	endif()
 
     if( UNITTEST )
+        source_group("C++ Source\\Shared" FILES ${UWP_Shared_Source_Files})
+        source_group("C++ Source\\Shared" FILES ${WinRT_Shared_Source_Files})
         source_group("C++ Source\\Shared\\WinRT" FILES ${UWP_Shared_WinRT_Source_Files})
         source_group("C++ Source\\System" FILES ${UWP_System_Source_Files})
         source_group("C++ Source\\System\\WinRT" FILES ${System_WinRT_Source_Files})
-        source_group("C++ Source\\Services\\Events" FILES ${Events_Source_Files})
-        source_group("C++ Source\\Services\\Misc" FILES ${UWP_Source_Files})
+        source_group("C++ Source\\Services\\Events" FILES ${UWP_Events_Source_Files})
+        source_group("C++ Source\\Services\\Misc" FILES ${UWP_Misc_Source_Files})
+        source_group("C++ Source\\Services\\Presence" FILES ${UWP_Presence_Source_Files})
         source_group("C++ Source\\Services\\Events\\WinRT" FILES ${Events_WinRT_Source_Files})
     endif()
     
@@ -1143,8 +1288,21 @@ else()
 		source_group("C++ Source\\Services\\Stats\\WinRT" FILES ${Stats_WinRT_Source_Files})
 		source_group("C++ Source\\Services\\TitleStorage\\WinRT" FILES ${TitleStorage_WinRT_Source_Files})
 		source_group("C++ Source\\Services\\Tournaments\\WinRT" FILES ${Tournaments_WinRT_Source_Files})
+        source_group("C++ Source\\Services\\Clubs\\WinRT" FILES ${Clubs_WinRT_Source_Files})
 	endif()
 
+	if( NOT WINRT OR UNITTEST )
+        source_group("C++ Source\\System\\C" FILES ${System_Source_Files_C})
+        source_group("C++ Source\\Shared\\C" FILES ${Shared_Source_Files_C})
+        source_group("C++ Source\\Services\\Achievements\\C" FILES ${Achievements_Source_Files_C})
+        source_group("C++ Source\\Services\\Common\\C" FILES ${Common_Source_Files_C})
+        source_group("C++ Source\\Services\\Social\\C" FILES ${Social_Source_Files_C})
+        source_group("C++ Source\\Services\\Social\\Manager\\C" FILES ${Social_Manager_Source_Files_C})
+        
+        if( NOT XDK AND NOT UNITTEST )
+            source_group("C++ Source\\System\\C" FILES ${UWP_System_Source_Files_C})
+        endif()
+	endif()
 
 	set( SOURCE_FILES 
 		${Common_Source_Files}
@@ -1168,6 +1326,7 @@ else()
 		${Multiplayer_Source_Files}
 		${Multiplayer_Manager_Source_Files}
 		${Tournaments_Source_Files}
+        ${Clubs_Source_Files}
 		)
 
 	if( WINRT OR UNITTEST )
@@ -1192,7 +1351,29 @@ else()
 			${TitleStorage_WinRT_Source_Files}
 			${Tournaments_WinRT_Source_Files}
 			${Shared_WinRT_Source_Files}
+            ${Clubs_WinRT_Source_Files}
 			)
+	endif()
+
+	if( NOT WINRT OR UNITTEST )
+        message(STATUS "Adding flat C source")
+        list(APPEND
+            SOURCE_FILES
+            ${Public_Source_Files_C}
+            ${Achievements_Source_Files_C}
+            ${Social_Manager_Source_Files_C}
+            ${Social_Source_Files_C}
+            ${Common_Source_Files_C}
+            ${Shared_Source_Files_C}
+            ${System_Source_Files_C}
+            )
+        
+        if( NOT XDK AND NOT UNITTEST )
+            list(APPEND
+                SOURCE_FILES
+                ${UWP_System_Source_Files_C}
+                )
+        endif()
 	endif()
 
 	if( XDK OR UNITTEST )
@@ -1200,6 +1381,7 @@ else()
 			SOURCE_FILES
 			${EntertainmentProfile_Source_Files}
 			${Marketplace_Source_Files}
+            ${XDK_Shared_Source_Files}
 			)
             
 		if( WINRT OR UNITTEST )
@@ -1210,31 +1392,44 @@ else()
                 ${XDK_WinRT_Shared_Source_Files}
 				)
 		endif()	# WINRT
-	else()
-		list(APPEND
-			SOURCE_FILES
-			${UWP_System_Source_Files}
-			${Events_Source_Files}
-			${UWP_Source_Files}
-			)
-            
-		if( WINRT OR UNITTEST )
+        
+        if( UNITTEST )
             list(APPEND
                 SOURCE_FILES
+                ${UWP_Shared_Source_Files}
+                ${WinRT_Shared_Source_Files}
+                )
+        endif()
+
+    else()
+        list(APPEND
+            SOURCE_FILES
+            ${UWP_Shared_Source_Files}
+            ${UWP_System_Source_Files}
+            ${UWP_Events_Source_Files}
+            ${UWP_Misc_Source_Files}
+            ${UWP_Presence_Source_Files}
+            )
+            
+        if( WINRT OR UNITTEST )
+            list(APPEND
+                SOURCE_FILES
+                ${WinRT_Shared_Source_Files}
                 ${UWP_Shared_WinRT_Source_Files}
                 ${Events_WinRT_Source_Files}
                 ${System_WinRT_Source_Files}
                 )
 		endif()
             
-	endif() # XDK
+    endif() # XDK
     
     if( UNITTEST )
         list(APPEND
             SOURCE_FILES
             ${UWP_System_Source_Files}
-            ${Events_Source_Files}
-            ${UWP_Source_Files}
+            ${UWP_Events_Source_Files}
+            ${UWP_Misc_Source_Files}
+            ${UWP_Presence_Source_Files}
             ${Events_WinRT_Source_Files}
             ${UWP_Shared_WinRT_Source_Files}
             ${System_WinRT_Source_Files}
@@ -1245,7 +1440,6 @@ endif() # SHIP
 
 set(UnitTests_Source_Files_Mocks
 	../../Tests/UnitTests/Mocks/MockHttpCall.cpp
-	../../Tests/UnitTests/Mocks/MockHttpClient.cpp
 	../../Tests/UnitTests/Mocks/MockLocalConfig.cpp
 	../../Tests/UnitTests/Mocks/MockMultiplayer.cpp
 	../../Tests/UnitTests/Mocks/MockSocialManager.cpp
@@ -1253,7 +1447,6 @@ set(UnitTests_Source_Files_Mocks
 	../../Tests/UnitTests/Mocks/MockXboxSystemFactory.cpp
 	../../Tests/UnitTests/Mocks/StockMocks.cpp
 	../../Tests/UnitTests/Mocks/MockHttpCall.h
-	../../Tests/UnitTests/Mocks/MockHttpClient.h
 	../../Tests/UnitTests/Mocks/MockLocalConfig.h
 	../../Tests/UnitTests/Mocks/MockMultiplayer.h
 	../../Tests/UnitTests/Mocks/MockSocialManager.h
@@ -1306,9 +1499,11 @@ set(UnitTests_Source_Files_Tests
 	../../Tests/UnitTests/Tests/Shared/ServiceCallLoggerTests.cpp
 	../../Tests/UnitTests/Tests/Shared/WebsocketTests.cpp
 	../../Tests/UnitTests/Tests/Shared/XboxLiveContextTests.cpp
+    ../../Tests/UnitTests/Tests/Shared/XboxLiveCallbackTests.cpp
 	../../Tests/UnitTests/Tests/Services/RtaTestHelper.h
 	../../Tests/UnitTests/Tests/Services/SocialManagerHelper.h
 	../../Tests/UnitTests/Tests/Services/StatsManagerHelper.h
+    ../../Tests/UnitTests/Tests/Services/ClubsTests.cpp
 	)
 
 set(Taef_UnitTests_Source_Files

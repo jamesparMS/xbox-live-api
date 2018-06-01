@@ -7,7 +7,6 @@
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_MULTIPLAYER_CPP_BEGIN
 
-std::mutex multiplayer_session_constants::m_lock;
 const uint32_t c_multiplayerSessionVersion = 1;
 
 multiplayer_session_constants::multiplayer_session_constants() :
@@ -135,84 +134,84 @@ multiplayer_session_constants::session_cloud_compute_package_constants_json() co
 const std::chrono::milliseconds&
 multiplayer_session_constants::member_reserved_time_out() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_memberReservedTimeout;
 }
 
 const std::chrono::milliseconds&
 multiplayer_session_constants::member_inactive_timeout() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_memberInactiveTimeout;
 }
 
 const std::chrono::milliseconds&
 multiplayer_session_constants::member_ready_timeout() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_memberReadyTimeout;
 }
 
 const std::chrono::milliseconds&
 multiplayer_session_constants::session_empty_timeout() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionEmptyTimeout;
 }
 
 const std::chrono::milliseconds&
 multiplayer_session_constants::arbitration_timeout() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_arbitrationTimeout;
 }
 
 const std::chrono::milliseconds&
 multiplayer_session_constants::forfeit_timeout() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_forfeitTimeout;
 }
 
 bool
 multiplayer_session_constants::enable_metrics_latency() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_enableMetricsLatency;
 }
 
 bool
 multiplayer_session_constants::enable_metrics_bandwidth_down() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_enableMetricsBandwidthDown;
 }
 
 bool
 multiplayer_session_constants::enable_metrics_bandwidth_up() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_enableMetricsBandwidthUp;
 }
 
 bool
 multiplayer_session_constants::enable_metrics_custom() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_enableMetricsCustom;
 }
 
 const multiplayer_managed_initialization&
 multiplayer_session_constants::managed_initialization() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_managedInitialization;
 }
 
 const multiplayer_member_initialization&
 multiplayer_session_constants::member_initialization() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_memberInitialization;
 }
 
@@ -220,14 +219,14 @@ multiplayer_session_constants::member_initialization() const
 const multiplayer_peer_to_peer_requirements&
 multiplayer_session_constants::peer_to_peer_requirements() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_peerToPeerRequirements;
 }
 
 const multiplayer_peer_to_host_requirements&
 multiplayer_session_constants::peer_to_host_requirements() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_peerToHostRequirements;
 }
 
@@ -240,75 +239,75 @@ multiplayer_session_constants::measurement_server_addresses_json() const
 bool
 multiplayer_session_constants::capabilities_connectivity() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionCapabilities.connectivity();
 }
 
 bool
 multiplayer_session_constants::capabilities_suppress_presence_activity_check() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionCapabilities.suppress_presence_activity_check();
 }
 
 bool
 multiplayer_session_constants::capabilities_gameplay() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionCapabilities.gameplay();
 }
 
 bool
 multiplayer_session_constants::capabilities_large() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionCapabilities.large();
 }
 
 bool
 multiplayer_session_constants::capabilities_connection_required_for_active_member() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionCapabilities.connection_required_for_active_members();
 }
 
 bool
 multiplayer_session_constants::capabilities_crossplay() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionCapabilities.crossplay();
 }
 
 bool
 multiplayer_session_constants::capabilities_user_authorization_style() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionCapabilities.user_authorization_style();
 }
 
 bool multiplayer_session_constants::capabilities_team() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionCapabilities.team();
 }
 
 bool multiplayer_session_constants::capabilities_searchable() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionCapabilities.searchable();
 }
 
 
 bool multiplayer_session_constants::capabilities_arbitration() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_sessionCapabilities.arbitration();
 }
 
 bool
 multiplayer_session_constants::_Should_serialize() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     return m_shouldSerialize;
 }
 
@@ -320,7 +319,7 @@ multiplayer_session_constants::_Set_timeouts(
     _In_ std::chrono::milliseconds sessionEmptyTimeout
     )
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
 
     m_writeTimeouts = true;
     m_memberReservedTimeout = std::move(memberReservedTimeout);
@@ -337,7 +336,7 @@ multiplayer_session_constants::_Set_arbitration_timeouts(
     _In_ std::chrono::milliseconds forfeitTimeout
     )
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
 
     m_writeArbitrationTimeouts = true;
     m_arbitrationTimeout = std::move(arbitrationTimeout);
@@ -353,7 +352,7 @@ multiplayer_session_constants::_Set_quality_of_service_connectivity_metrics(
     _In_ bool enableCustomMetric
     )
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
 
     m_writeQualityOfServiceConnectivityMetrics = true;
     m_enableMetricsLatency = enableLatencyMetric;
@@ -373,7 +372,7 @@ multiplayer_session_constants::_Set_managed_initialization(
     _In_ uint32_t membersNeededToStart
     )
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
 
     m_writeMemberInitialization = true;
     m_managedInitialization = multiplayer_managed_initialization(
@@ -404,7 +403,7 @@ multiplayer_session_constants::_Set_member_initialization(
     _In_ uint32_t membersNeededToStart
 )
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
 
     m_writeMemberInitialization = true;
     m_managedInitialization = multiplayer_managed_initialization(
@@ -432,7 +431,7 @@ multiplayer_session_constants::_Set_peer_to_peer_requirements(
     _In_ uint32_t bandwidthMinimumInKilobitsPerSecond
     )
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
 
     m_writePeerToPeerRequirements = true;
     m_peerToPeerRequirements = multiplayer_peer_to_peer_requirements(
@@ -451,7 +450,7 @@ multiplayer_session_constants::_Set_peer_to_host_requirements(
     _In_ multiplay_metrics hostSelectionMetric
     )
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
 
     m_writePeerToHostRequirements = true;
     m_peerToHostRequirements = multiplayer_peer_to_host_requirements(
@@ -469,7 +468,7 @@ multiplayer_session_constants::_Set_session_capabilities(
     _In_ const multiplayer_session_capabilities& capabilities
     )
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
 
     m_sessionCapabilities = capabilities;
     m_shouldSerialize = true;
@@ -480,7 +479,7 @@ multiplayer_session_constants::_Set_measurement_server_addresses(
     _In_ const std::vector<xbox::services::game_server_platform::quality_of_service_server>& serverAddresses
     )
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     m_writeMeasurementServerAddresses = true;
 
     for (const auto& address : serverAddresses)
@@ -488,7 +487,9 @@ multiplayer_session_constants::_Set_measurement_server_addresses(
         web::json::value qosServerJson;
         qosServerJson[_T("secureDeviceAddress")] = web::json::value::string(address.secure_device_address_base64());
         auto targetLocationKey = address.target_location();
-        std::transform(targetLocationKey.begin(), targetLocationKey.end(), targetLocationKey.begin(), ::tolower);
+        std::transform(targetLocationKey.begin(), targetLocationKey.end(), targetLocationKey.begin(), [](utility::char_t c) {
+            return (utility::char_t)tolower(c);
+        });
         m_measurementServerAddressesJson[targetLocationKey] = qosServerJson;
     }
     
@@ -500,7 +501,7 @@ multiplayer_session_constants::_Set_cloud_compute_package_json(
     _In_ web::json::value sessionCloudComputePackageConstantsJson
     )
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
 
     m_sessionCloudComputePackageJson = std::move(sessionCloudComputePackageConstantsJson);
     m_shouldSerialize = true;
@@ -509,7 +510,7 @@ multiplayer_session_constants::_Set_cloud_compute_package_json(
 web::json::value
 multiplayer_session_constants::_Serialize()
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(get_xsapi_singleton()->m_mpsdConstantLock);
     
     web::json::value serializedObject = web::json::value::object();
     if (!m_shouldSerialize)
@@ -706,12 +707,12 @@ multiplayer_session_constants::_Deserialize(
     returnResult.m_sessionCapabilities.set_has_owners(hasOwners);
     returnResult.m_sessionCapabilities.set_searchable(searchable);
 
-    returnResult.m_memberReservedTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemJson, _T("reservedRemovalTimeout"), errc, false));
-    returnResult.m_memberInactiveTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemJson, _T("inactiveRemovalTimeout"), errc, false));
-    returnResult.m_memberReadyTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemJson, _T("readyRemovalTimeout"), errc, false));
-    returnResult.m_sessionEmptyTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemJson, _T("sessionEmptyTimeout"), errc, false));
-    returnResult.m_arbitrationTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemArbitrationTimeoutsJson, _T("arbitrationTimeout"), errc, false));
-    returnResult.m_forfeitTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemArbitrationTimeoutsJson, _T("forfeitTimeout"), errc, false));
+    returnResult.m_memberReservedTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemJson, "reservedRemovalTimeout", errc, false));
+    returnResult.m_memberInactiveTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemJson, "inactiveRemovalTimeout", errc, false));
+    returnResult.m_memberReadyTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemJson, "readyRemovalTimeout", errc, false));
+    returnResult.m_sessionEmptyTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemJson, "sessionEmptyTimeout", errc, false));
+    returnResult.m_arbitrationTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemArbitrationTimeoutsJson, "arbitrationTimeout", errc, false));
+    returnResult.m_forfeitTimeout = std::chrono::milliseconds(utils::extract_json_uint52(systemArbitrationTimeoutsJson, "forfeitTimeout", errc, false));
 
     returnResult.m_enableMetricsLatency = utils::extract_json_bool(systemMetricsJson, _T("latency"), errc, false);
     returnResult.m_enableMetricsBandwidthDown = utils::extract_json_bool(systemMetricsJson, _T("bandwidthDown"), errc, false);

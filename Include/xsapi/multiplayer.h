@@ -3,7 +3,6 @@
 
 #pragma once
 #include <mutex>
-#include <cpprest/ws_client.h>
 #include "xsapi/real_time_activity.h"
 #include "xsapi/game_server_platform.h"
 
@@ -135,6 +134,11 @@ enum class tournament_arbitration_status
     /// The user was not able to upload results before the arbitrationTimeout deadline.
     /// </summary>
     incomplete,
+
+    /// <summary>
+    /// The status is "joining" until both the tournament_arbitration_status is "in_progress" and the member is active.
+    /// </summary>
+    joining
 };
 
 
@@ -625,7 +629,7 @@ enum class write_session_status
     handle_not_found,
 
     /// <summary>
-    /// HTTP Result 412- Session docuemnt is not the most recent
+    /// HTTP Result 412- Session document is not the most recent
     /// </summary>
     out_of_sync,
 
@@ -1536,8 +1540,6 @@ private:
     // MeasurementServerAddresses
     bool m_writeMeasurementServerAddresses;
     web::json::value m_measurementServerAddressesJson;
-
-    static std::mutex m_lock;
 };
 
 /// <summary>
@@ -1750,7 +1752,7 @@ public:
     _XSAPIIMP xbox::services::tournaments::tournament_registration_state registration_state() const;
 
     /// <summary>
-    /// The tournament registration reaon for the certain state.
+    /// The tournament registration reason for the certain state.
     /// </summary>
     _XSAPIIMP xbox::services::tournaments::tournament_registration_reason registration_reason() const;
 
@@ -1969,7 +1971,7 @@ public:
     _XSAPIIMP multiplayer_session_visibility visibility() const;
 
     /// <summary>
-    /// The join restriction of the session, which applies if visiblity is "open".
+    /// The join restriction of the session, which applies if visibility is "open".
     /// </summary>
     _XSAPIIMP multiplayer_session_restriction join_restriction() const;
 
@@ -2313,7 +2315,7 @@ public:
     _XSAPIIMP bool is_current_user() const;
 
     /// <summary>
-    /// Indiates to run QoS initialization for this user. Defaults to false.
+    /// Indicates to run QoS initialization for this user. Defaults to false.
     /// Ignored if there is not a "memberInitialization" section for the session.
     /// </summary>
     _XSAPIIMP bool initialize_requested() const;
@@ -2568,8 +2570,6 @@ private:
     web::json::value m_memberMeasurementsJson;
     std::shared_ptr<std::vector<multiplayer_quality_of_service_measurements>> m_memberMeasurements;
 
-    static std::mutex m_lock;
-
     friend class multiplayer_session;
 };
 
@@ -2763,8 +2763,6 @@ private:
     bool m_closed;
     bool m_locked;
     bool m_allocateCloudCompute;
-
-    static std::mutex m_lock;
 };
 
 /// <summary>
@@ -2912,7 +2910,7 @@ public:
     
     /// <summary>
     /// A collection of members that are in the session or entering the session together. 
-    /// Call MultiplayerSession::Join or MultiplayerSession::Leave to add or remove youself from this list.  
+    /// Call MultiplayerSession::Join or MultiplayerSession::Leave to add or remove yourself from this list.  
     /// Call MultiplayerSession::AddMemberReservation to add a reservation for another user on this list.
     /// Call multiplayer_service::write_session to write these changes to the service.
     /// </summary>
@@ -3523,6 +3521,14 @@ public:
     /// Internal function
     /// </summary>
     static std::error_code _Populate_members_with_members_list(_In_ std::vector<std::shared_ptr<multiplayer_session_member>> members);
+
+    /// <summary>
+    /// Internal function
+    /// </summary>
+    static bool _Do_session_references_match(
+        _In_ xbox::services::multiplayer::multiplayer_session_reference sessionRef1,
+        _In_ xbox::services::multiplayer::multiplayer_session_reference sessionRef2
+        );
 
     /// <summary>
     /// Internal function
@@ -4214,7 +4220,7 @@ public:
     /// Registers an event handler for notifications when a multiplayer session changes.
     /// Event handlers receive a multiplayer_session_change_event_args&amp; object.
     /// </summary>
-    /// <param name="handler">The callback function that recieves notifications.</param>
+    /// <param name="handler">The callback function that receives notifications.</param>
     /// <returns>
     /// A function_context object that can be used to unregister the event handler.
     /// </returns>
@@ -4227,13 +4233,13 @@ public:
     /// Unregisters an event handler for multiplayer session change notifications.
     /// </summary>
     /// <param name="context">The function_context object that was returned when the event handler was registered. </param>
-    /// <param name="context">The callback function that recieves notifications.</param>
+    /// <param name="context">The callback function that receives notifications.</param>
     _XSAPIIMP void remove_multiplayer_session_changed_handler(_In_ function_context context);
 
     /// <summary>
     /// Registers an event handler for notifications when a multiplayer subscription is lost.
     /// </summary>
-    /// <param name="handler">The callback function that recieves notifications.</param>
+    /// <param name="handler">The callback function that receives notifications.</param>
     /// <returns>
     /// A function_context object that can be used to unregister the event handler.
     /// </returns>
@@ -4246,7 +4252,7 @@ public:
     /// Unregisters an event handler for multiplayer subscription lost notifications.
     /// </summary>
     /// <param name="context">The function_context object that was returned when the event handler was registered. </param>
-    /// <param name="handler">The callback function that recieves notifications.</param>
+    /// <param name="handler">The callback function that receives notifications.</param>
     _XSAPIIMP void remove_multiplayer_subscription_lost_handler(_In_ function_context context);
 
     std::shared_ptr<xbox_live_context_settings> _Xbox_live_context_settings() { return m_xboxLiveContextSettings; }

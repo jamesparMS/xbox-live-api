@@ -5,6 +5,7 @@
 #include "shared_macros.h"
 #include "xsapi/system.h"
 #include "xbox_system_factory.h"
+#include "xbox_service_call_routed_event_args_internal.h"
 #if XSAPI_A
 #include "Logger/android/logcat_output.h"
 #else
@@ -50,27 +51,10 @@ xbox_live_context_settings::_Set_dispatcher(
             Windows::UI::Core::CoreDispatcherPriority::Normal,
             ref new Windows::UI::Core::DispatchedHandler([]()
         {
-            XBOX_LIVE_NAMESPACE::utils::generate_locales();
+            xbox::services::utils::generate_locales();
         }));
     }
 }
-#endif
-
-#if (XSAPI_SERVER || UNIT_TEST_SYSTEM)
-
-cert_context xbox_live_context_settings::_s_certContext;
-
-/// <summary>
-/// Sets the SSL Cert
-/// </summary>
-void xbox_live_context_settings::_Set_SSL_cert(_In_ cert_context cert)
-{
-    if (cert != nullptr)
-    {
-        _s_certContext = cert;
-    }
-};
-
 #endif
 
 xbox_live_context_settings::xbox_live_context_settings() :
@@ -86,15 +70,28 @@ xbox_live_context_settings::xbox_live_context_settings() :
 {
 }
 
-function_context xbox_live_context_settings::add_service_call_routed_handler(_In_ std::function<void(const XBOX_LIVE_NAMESPACE::xbox_service_call_routed_event_args&)> handler)
+function_context xbox_live_context_settings::add_service_call_routed_handler(_In_ std::function<void(const xbox_service_call_routed_event_args&)> handler)
 {
-    std::lock_guard<std::mutex> lock(m_writeLock);
+    auto singleton = get_xsapi_singleton();
+    std::lock_guard<std::mutex> lock(singleton->m_serviceCallRoutedHandlersLock);
 
     function_context context = -1;
     if (handler != nullptr)
     {
-        context = ++m_serviceCallRoutedHandlersCounter;
-        m_serviceCallRoutedHandlers[m_serviceCallRoutedHandlersCounter] = std::move(handler);
+        context = singleton->m_serviceCallRoutedHandlersCounter++;
+        singleton->m_serviceCallRoutedHandlers[context] = std::move(handler);
+        HCAddCallRoutedHandler([](hc_call_handle_t call, void* context)
+        {
+            auto singleton = get_xsapi_singleton();
+            std::lock_guard<std::mutex> lock(singleton->m_serviceCallRoutedHandlersLock);
+
+            auto iter = singleton->m_serviceCallRoutedHandlers.find(static_cast<function_context>((int64)context));
+            if (iter != singleton->m_serviceCallRoutedHandlers.end())
+            {
+                (iter->second)(xsapi_allocate_shared<xbox_service_call_routed_event_args_internal>(call));
+            }
+        },
+        (void*)((int64_t)context));
     }
 
     return context;
@@ -102,8 +99,9 @@ function_context xbox_live_context_settings::add_service_call_routed_handler(_In
 
 void xbox_live_context_settings::remove_service_call_routed_handler(_In_ function_context context)
 {
-    std::lock_guard<std::mutex> lock(m_writeLock);
-    m_serviceCallRoutedHandlers.erase(context);
+    auto singleton = get_xsapi_singleton();
+    std::lock_guard<std::mutex> lock(singleton->m_serviceCallRoutedHandlersLock);
+    singleton->m_serviceCallRoutedHandlers.erase(context);
 }
 
 bool xbox_live_context_settings::enable_service_call_routed_events() const
@@ -121,11 +119,12 @@ void xbox_live_context_settings::set_diagnostics_trace_level(_In_ xbox_services_
     system::xbox_live_services_settings::get_singleton_instance()->set_diagnostics_trace_level(value);
 }
 
-void xbox_live_context_settings::_Raise_service_call_routed_event(_In_ const XBOX_LIVE_NAMESPACE::xbox_service_call_routed_event_args& result)
+void xbox_live_context_settings::_Raise_service_call_routed_event(_In_ const xbox::services::xbox_service_call_routed_event_args& result)
 {
-    std::lock_guard<std::mutex> lock(m_writeLock);
+    auto singleton = get_xsapi_singleton();
+    std::lock_guard<std::mutex> lock(singleton->m_serviceCallRoutedHandlersLock);
 
-    for (auto& handler : m_serviceCallRoutedHandlers)
+    for (auto& handler : singleton->m_serviceCallRoutedHandlers)
     {
         XSAPI_ASSERT(handler.second != nullptr);
         if (handler.second != nullptr)

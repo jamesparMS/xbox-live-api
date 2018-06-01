@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #pragma once
+#include <mutex>
 NAMESPACE_MICROSOFT_XBOX_SERVICES_SYSTEM_CPP_BEGIN
 
 enum class token_identity_type
@@ -26,22 +27,24 @@ public:
     /// Internal function
     /// </summary>
     auth_config(
-        _In_ string_t sandbox,
-        _In_ string_t environmentPrefix,
-        _In_ string_t environment,
+        _In_ xsapi_internal_string sandbox,
+        _In_ xsapi_internal_string environmentPrefix,
+        _In_ xsapi_internal_string environment,
         _In_ bool useCompactTicket,
-        _In_ bool isCreatorsTitle
+        _In_ bool isCreatorsTitle,
+        _In_ xsapi_internal_string scope
         );
 
-    const string_t& xbox_live_endpoint() const;
-    void set_xbox_live_endpoint(_In_ string_t value);
+    const xsapi_internal_string& xbox_live_endpoint() const;
+    void set_xbox_live_endpoint(_In_ xsapi_internal_string value);
 
-    const string_t& rps_ticket_service() const;
-    void set_rps_ticket_service(_In_ string_t value);
-    const string_t& rps_ticket_policy() const;
-    void set_rps_ticket_policy(_In_ string_t value);
+    const xsapi_internal_string& rps_ticket_service() const;
+    void set_rps_ticket_service(_In_ xsapi_internal_string value);
+    const xsapi_internal_string& rps_ticket_policy() const;
+    void set_rps_ticket_policy(_In_ xsapi_internal_string value);
 
-#if XSAPI_SERVER || XSAPI_U
+#if XSAPI_U
+    // TODO update mobile auth config
     /// <summary>
     /// Internal function
     /// </summary>
@@ -92,26 +95,27 @@ public:
     void reset();
 
 private:
-    string_t m_sandbox;
-    string_t m_rpsTicketService;
-    string_t m_rpsTicketPolicy;
-    string_t m_xTitleEndpoint;
-    string_t m_deviceTokenEndpoint;
-    string_t m_titleTokenEndpoint;
-    string_t m_userTokenEndpoint;
-    string_t m_serviceTokenEndpoint;
-    string_t m_xTokenEndpoint;
-    string_t m_userTokenSiteName;
-    string_t m_xboxLiveRelyingParty;
-    string_t m_xboxLiveEndpoint;
-    string_t m_appId;
-    string_t m_accountId;
+    mutable std::mutex m_mutex;
+    xsapi_internal_string m_sandbox;
+    xsapi_internal_string m_rpsTicketService;
+    xsapi_internal_string m_rpsTicketPolicy;
+    xsapi_internal_string m_xTitleEndpoint;
+    xsapi_internal_string m_deviceTokenEndpoint;
+    xsapi_internal_string m_titleTokenEndpoint;
+    xsapi_internal_string m_userTokenEndpoint;
+    xsapi_internal_string m_serviceTokenEndpoint;
+    xsapi_internal_string m_xTokenEndpoint;
+    xsapi_internal_string m_userTokenSiteName;
+    xsapi_internal_string m_xboxLiveRelyingParty;
+    xsapi_internal_string m_xboxLiveEndpoint;
+    xsapi_internal_string m_appId;
+    xsapi_internal_string m_accountId;
     bool m_useCompactTicket;
     uint32_t m_detailError;
-    string_t m_redirect;
-    std::vector<token_identity_type> m_xtokenComposition;
+    xsapi_internal_string m_redirect;
+    xsapi_internal_vector<token_identity_type> m_xtokenComposition;
     uint32_t m_httpStatusCode;
-    string_t m_environment;
+    xsapi_internal_string m_environment;
 };
 
 

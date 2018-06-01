@@ -6,9 +6,10 @@
 #pragma warning(disable: 4266)
 #pragma warning(disable: 4062)
 
-#include <cpprest/http_msg.h>
+#include "cpprest/http_msg.h"
 #include "xsapi/types.h"
 #include "xsapi/errors.h"
+#include "xsapi/mem.h"
 #include "xsapi/system.h"
 #include "xsapi/service_call_logging_config.h"
 
@@ -20,6 +21,7 @@
 #include "xsapi/title_storage.h"
 #include "xsapi/privacy.h"
 #include "xsapi/profile.h"
+#include "xsapi/clubs.h"
 
 #if !defined(XBOX_LIVE_CREATORS_SDK)
 #include "xsapi/events.h"

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#pragma once
 
 #include "pch.h"
 #include <atomic>
@@ -556,7 +555,7 @@ multiplayer_match_client::handle_match_found(
     m_matchStatus = match_status::found;
     auto targetSessionRef = currentSession->matchmaking_server().target_session_ref();
     auto targetGameSession = std::make_shared<multiplayer_session>(
-        primaryXboxLiveContext->xbox_live_user_id(),
+        utils::string_t_from_internal_string(primaryXboxLiveContext->xbox_live_user_id()),
         targetSessionRef
         );
 

@@ -6,4 +6,7 @@
 	url = https://github.com/Microsoft/cppwinrt.git
 [submodule "InProgressSamples/Kits/DirectXTK"]
 	path = InProgressSamples/Kits/DirectXTK
-	url = https://github.com/Microsoft/DirectXTK.git
+	url = https://github.com/jasonsandlin/DirectXTK.git
+[submodule "External/libHttpClient"]
+	path = External/libHttpClient
+	url = https://github.com/Microsoft/libHttpClient.git

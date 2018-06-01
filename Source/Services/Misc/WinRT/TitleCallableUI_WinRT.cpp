@@ -181,6 +181,7 @@ TitleCallableUI::ShowPlayerPickerUIForUser(
 Windows::Foundation::IAsyncAction^ 
 TitleCallableUI::ShowGameInviteUIForUserAsync(
     _In_ Xbox::Services::Multiplayer::MultiplayerSessionReference^ sessionReference,
+    _In_ Platform::String^ invitationDisplayText,
     _In_ Platform::String^ contextStringId,
     _In_ Windows::System::User^ user
     )
@@ -189,6 +190,7 @@ TitleCallableUI::ShowGameInviteUIForUserAsync(
 
     auto task = title_callable_ui::show_game_invite_ui(
         sessionReference->GetCppObj(),
+        STRING_T_FROM_PLATFORM_STRING(invitationDisplayText),
         STRING_T_FROM_PLATFORM_STRING(contextStringId),
         user
         )
@@ -200,7 +202,30 @@ TitleCallableUI::ShowGameInviteUIForUserAsync(
     return ASYNC_FROM_TASK(task);
 }
 
-Windows::Foundation::IAsyncAction^ 
+Windows::Foundation::IAsyncAction^
+TitleCallableUI::ShowGameInviteUIForUserAsync(
+    _In_ Xbox::Services::Multiplayer::MultiplayerSessionReference^ sessionReference,
+    _In_ Platform::String^ contextStringId,
+    _In_ Windows::System::User^ user
+)
+{
+    THROW_INVALIDARGUMENT_IF_NULL(sessionReference);
+
+    auto task = title_callable_ui::show_game_invite_ui(
+        sessionReference->GetCppObj(),
+        string_t(),
+        STRING_T_FROM_PLATFORM_STRING(contextStringId),
+        user
+    )
+        .then([](xbox_live_result<void> result)
+    {
+        THROW_IF_ERR(result);
+    });
+
+    return ASYNC_FROM_TASK(task);
+}
+
+Windows::Foundation::IAsyncAction^
 TitleCallableUI::ShowProfileCardUIForUserAsync(
     _In_ Platform::String^ targetXboxUserId,
     _In_ Windows::System::User^ user
@@ -290,6 +315,71 @@ TitleCallableUI::CheckGamingPrivilegeWithUIForUser(
     return ASYNC_FROM_TASK(task);
 }
 
+#if defined(_APISET_TARGET_VERSION_WIN10_RS3)
+Windows::Foundation::IAsyncAction^
+TitleCallableUI::ShowFriendFinderForUser(
+    _In_ Windows::System::User^ user
+    )
+{
+    auto task = title_callable_ui::show_friend_finder_ui(
+        user
+        )
+    .then([](xbox_live_result<void> result)
+    {
+        THROW_IF_ERR(result);
+    });
+
+    return ASYNC_FROM_TASK(task);
+}
+
+Windows::Foundation::IAsyncAction^
+TitleCallableUI::ShowTitleHubForUser(
+    _In_ Windows::System::User^ user
+    )
+{
+    auto task = title_callable_ui::show_title_hub_ui(
+        user
+    )
+    .then([](xbox_live_result<void> result)
+    {
+        THROW_IF_ERR(result);
+    });
+
+    return ASYNC_FROM_TASK(task);
+}
+
+Windows::Foundation::IAsyncAction^
+TitleCallableUI::ShowUserSettingsForUser(
+    _In_ Windows::System::User^ user
+    )
+{
+    auto task = title_callable_ui::show_user_settings_ui(
+        user
+    )
+    .then([](xbox_live_result<void> result)
+    {
+        THROW_IF_ERR(result);
+    });
+
+    return ASYNC_FROM_TASK(task);
+}
+
+Windows::Foundation::IAsyncAction^
+TitleCallableUI::ShowCustomizeUserProfileForUser(
+    _In_opt_ Windows::System::User^ user
+    )
+{
+    auto task = title_callable_ui::show_customize_user_profile_ui(
+        user
+    )
+    .then([](xbox_live_result<void> result)
+    {
+        THROW_IF_ERR(result);
+    });
+
+    return ASYNC_FROM_TASK(task);
+}
+#endif
 #endif
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_SYSTEM_END

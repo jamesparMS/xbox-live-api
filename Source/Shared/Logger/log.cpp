@@ -6,8 +6,6 @@
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN
 
-std::shared_ptr<logger> logger::s_logger = nullptr;
-
 void logger::add_log_output(std::shared_ptr<log_output> output)
 {
     m_log_outputs.emplace_back(output); 
@@ -20,6 +18,17 @@ void logger::add_log_output(std::shared_ptr<log_output> output)
 void logger::set_log_level(log_level level)
 {
     m_logLevel = level;
+
+    HCTraceLevel traceLevel = HCTraceLevel::HCTraceLevel_Off;
+    switch (level)
+    {
+        case log_level::off: traceLevel = HCTraceLevel::HCTraceLevel_Off; break;
+        case log_level::error: traceLevel = HCTraceLevel::HCTraceLevel_Error; break;
+        case log_level::warn: traceLevel = HCTraceLevel::HCTraceLevel_Warning; break;
+        case log_level::info: traceLevel = HCTraceLevel::HCTraceLevel_Information; break;
+        case log_level::debug: traceLevel = HCTraceLevel::HCTraceLevel_Verbose; break;
+    }
+    HCSettingsSetTraceLevel(traceLevel);
 
     for (const auto& output : m_log_outputs)
     {

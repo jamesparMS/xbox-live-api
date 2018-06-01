@@ -360,7 +360,7 @@ string_t catalog_service::marketplace_browse_catalog_subpath(
 #if TV_API
     source << Windows::Xbox::ApplicationModel::Store::Configuration::MarketplaceId->Data();
 #else
-    source << utils::get_locales();
+    source << utils::string_t_from_internal_string(utils::get_locales());
 #endif
     source << _T("/browse");
 
@@ -389,12 +389,10 @@ string_t catalog_service::marketplace_browse_catalog_subpath(
         param << _T("relationship=");
         param << web::uri::encode_uri(relationship);
         params.push_back(param.str());
-
-        // We don't add the 'orderBy' with a bundle relationship browse
     }
-    else
+    
+    if (!orderBy.empty())
     {
-        // If this is not a bundle relationship call, add the orderBy filter
         stringstream_t param;
         param << _T("orderBy=");
         param << web::uri::encode_uri(orderBy);
@@ -440,7 +438,7 @@ catalog_service::marketplace_catalog_details_subpath(
 #if TV_API
     source << Windows::Xbox::ApplicationModel::Store::Configuration::MarketplaceId->Data();
 #else
-    source << utils::get_locales();
+    source << utils::string_t_from_internal_string(utils::get_locales());
 #endif
     source << _T("/details");
 
@@ -486,7 +484,7 @@ catalog_service::browse_catalog_bundles_helper(
         _Convert_media_item_type_to_string(parentMediaType),
         _T("DGame.DDurable.DConsumable.DApp"),  // get all related product types in the bundle
         convert_bundle_relationship_type_to_string(relationship),
-        string_t(),                                 // No need to sort on a bundle search
+        convert_sort_order_to_string( catalog_sort_order::release_date ).payload(),  // bundles_with_product requires a sorting field
         skipItems,
         maxItems
         );
@@ -541,7 +539,7 @@ catalog_service::browse_catalog_bundles_helper(
         }
         
         return utils::generate_xbox_live_result<browse_catalog_result>(
-            browse_catalog_result::_Deserialize(response->response_body_json()),
+            catalogResult,
             response
             );
     });

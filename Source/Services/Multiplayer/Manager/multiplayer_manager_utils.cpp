@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#pragma once
 
 #include "pch.h"
 #include "multiplayer_manager_internal.h"
@@ -115,7 +114,7 @@ multiplayer_manager_utils::get_local_user_xbox_user_id(
         return string_t();
     }
 
-    return user_context::get_user_id(user);
+    return utils::string_t_from_internal_string(user_context::get_user_id(user));
 }
 
 bool

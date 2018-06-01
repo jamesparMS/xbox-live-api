@@ -3,7 +3,6 @@
 
 #pragma once
 #include <mutex>
-#include <cpprest/ws_client.h>
 
 namespace xbox { namespace services {
     class web_socket_connection;
@@ -117,17 +116,22 @@ public:
     /// <summary>
     /// Internal function
     /// </summary>
+    real_time_activity_subscription() {}
+
+    /// <summary>
+    /// Internal function
+    /// </summary>
     real_time_activity_subscription(_In_ std::function<void(const real_time_activity_subscription_error_event_args&)> subscriptionErrorHandler);
 
     /// <summary>The state of the subscription request.</summary>
-    _XSAPIIMP real_time_activity_subscription_state state() const;
+    _XSAPIIMP virtual real_time_activity_subscription_state state() const; // TODO this shouldn't be virtual after we migrate this class
     virtual void _Set_state(_In_ real_time_activity_subscription_state newState);
 
     /// <summary>The resource uri for the request.</summary>
-    _XSAPIIMP const string_t& resource_uri() const;
+    _XSAPIIMP virtual const string_t& resource_uri() const; // TODO this shouldn't be virtual after we migrate this class
 
     /// <summary>The unique subscription id for the request.</summary>
-    _XSAPIIMP uint32_t subscription_id() const;
+    _XSAPIIMP virtual uint32_t subscription_id() const; // TODO this shouldn't be virtual after we migrate this class
     
     virtual ~real_time_activity_subscription() {}
 
@@ -164,12 +168,12 @@ public:
     /// <summary>
     /// The error returned by the operation.
     /// </summary>
-    _XSAPIIMP const std::error_code& err();
+    _XSAPIIMP const std::error_code& err() const;
 
     /// <summary>
     /// The error message
     /// </summary>
-    _XSAPIIMP const std::string& err_message();
+    _XSAPIIMP const std::string& err_message() const;
 
     /// <summary>
     /// Internal function
@@ -208,11 +212,11 @@ public:
     _XSAPIIMP void deactivate();
 
     /// <summary>
-    /// Registers a handler function to recieve a notification that is sent when the client service
+    /// Registers a handler function to receive a notification that is sent when the client service
     /// loses or gains connectivity to the real time activity service.
-    /// Event handlers recieve a real_time_activity_connection_state object.
+    /// Event handlers receive a real_time_activity_connection_state object.
     /// </summary>
-    /// <param name="handler">The callback function that recieves notifications.</param>
+    /// <param name="handler">The callback function that receives notifications.</param>
     /// <returns>
     /// A function_context object that can be used to unregister the event handler.
     /// </returns>
@@ -225,11 +229,11 @@ public:
     _XSAPIIMP void remove_connection_state_change_handler(_In_ function_context remove);
 
     /// <summary>
-    /// Registers a handler function to recieve a notification that is sent when there is an
+    /// Registers a handler function to receive a notification that is sent when there is an
     /// error in the real time activity service.
-    /// Event handlers recieve a real_time_activity_subscription_error_event_args&amp; object.
+    /// Event handlers receive a real_time_activity_subscription_error_event_args&amp; object.
     /// </summary>
-    /// <param name="handler">The callback function that recieves notifications.</param>
+    /// <param name="handler">The callback function that receives notifications.</param>
     /// <returns>
     /// A function_context object that can be used to unregister the event handler.
     /// </returns>
@@ -242,12 +246,12 @@ public:
     _XSAPIIMP void remove_subscription_error_handler(_In_ function_context remove);
 
     /// <summary>
-    /// Registers a handler function to recieve a notification that is sent when there is a
-    /// resync message from the real time activity serivce.
+    /// Registers a handler function to receive a notification that is sent when there is a
+    /// resync message from the real time activity service.
     /// This message indicates that data may have been lost and to resync all data by calling
     /// corresponding REST API's
     /// </summary>
-    /// <param name="handler">The callback function that recieves notifications.</param>
+    /// <param name="handler">The callback function that receives notifications.</param>
     /// <returns>
     /// A function_context object that can be used to unregister the event handler.
     /// </returns>
@@ -310,12 +314,12 @@ public:
     /// <summary>
     /// Internal function
     /// </summary>
-    static std::unordered_map<string_t, uint32_t> _Rta_activation_map();
+    static std::unordered_map<xsapi_internal_string, uint32_t> _Rta_activation_map();
 
     /// <summary>
     /// Internal function
     /// </summary>
-    static std::unordered_map<string_t, uint32_t> _Rta_manager_activation_map();
+    static std::unordered_map<xsapi_internal_string, uint32_t> _Rta_manager_activation_map();
 
 private:
     std::unordered_map<function_context, std::function<void(real_time_activity_connection_state)>> m_connectionStateChangeHandler;
@@ -350,8 +354,7 @@ private:
     std::shared_ptr<xbox::services::xbox_live_app_config> m_appConfig;
 
     // web socket events callbacks
-    void on_socket_message_received(_In_ const string_t& message);
-    void on_socket_closed(_In_ web::websockets::client::websocket_close_status closeStatus, _In_ string_t closeReason);
+    void on_socket_message_received(_In_ const xsapi_internal_string& message);
     void on_socket_connection_state_change(_In_ web_socket_connection_state oldState, _In_ web_socket_connection_state newState);
 
     volatile long m_sequenceNumber;
@@ -365,7 +368,7 @@ private:
     real_time_activity_connection_state m_connectionState;
     std::shared_ptr<xbox::services::web_socket_connection> m_webSocketConnection;
 
-#if UWP_API || TV_API
+#if UWP_API || TV_API || UNIT_TEST_SERVICES
     Windows::Foundation::EventRegistrationToken m_rtaShutdownToken;
 #endif
 

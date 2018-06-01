@@ -7,33 +7,20 @@
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_SYSTEM_CPP_BEGIN
 
-
-
+_Ret_maybenull_ _Post_writable_byte_size_(dwSize) 
 void* xsapi_memory::mem_alloc(
     _In_ size_t dwSize
     )
 {
-    std::function<_Ret_maybenull_ _Post_writable_byte_size_(dwSize) void*(_In_ size_t dwSize)> pMemAlloc;
-    auto xboxLiveServiceSettings = XBOX_LIVE_NAMESPACE::system::xbox_live_services_settings::get_singleton_instance();
-    if (xboxLiveServiceSettings != nullptr)
+    try
     {
-        pMemAlloc = XBOX_LIVE_NAMESPACE::system::xbox_live_services_settings::get_singleton_instance()->m_pMemAllocHook;
+        init_mem_hooks();
+        return g_pMemAllocHook(dwSize, 0);
     }
-    if (pMemAlloc == nullptr)
+    catch (...)
     {
-        return new (std::nothrow) int8_t[dwSize];
-    }
-    else
-    {
-        try
-        {
-            return pMemAlloc(dwSize);
-        }
-        catch (...)
-        {
-            LOG_ERROR("mem_alloc callback failed.");
-            return nullptr;
-        }
+        LOG_ERROR("mem_alloc callback failed.");
+        return nullptr;
     }
 }
 
@@ -41,26 +28,17 @@ void xsapi_memory::mem_free(
     _In_ void* pAddress
     )
 {
-    std::function<void(_In_ void* pAddress)> pMemFree = nullptr;
-    auto xboxLiveServiceSettings = XBOX_LIVE_NAMESPACE::system::xbox_live_services_settings::get_singleton_instance();
-    if (xboxLiveServiceSettings != nullptr)
+    try
     {
-        pMemFree = xboxLiveServiceSettings->m_pMemFreeHook;
-    }
-    if (pMemFree == nullptr)
-    {
-        delete[] pAddress;
-    }
-    else
-    {
-        try
+        init_mem_hooks();
+        if (pAddress)
         {
-            return pMemFree(pAddress);
+            g_pMemFreeHook(pAddress, 0);
         }
-        catch (...)
-        {
-            LOG_ERROR("mem_free callback failed.");
-        }
+    }
+    catch (...)
+    {
+        LOG_ERROR("mem_alloc callback failed.");
     }
 }
 

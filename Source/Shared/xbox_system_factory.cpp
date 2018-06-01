@@ -5,7 +5,6 @@
 #if !TV_API
 #include "xbox_system_factory.h"
 #endif
-#include "http_client.h"
 #include "xbox_system_factory.h"
 #if XSAPI_A
 #include "a/user_impl_a.h"
@@ -13,29 +12,29 @@
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_SYSTEM_CPP_BEGIN
 
-std::mutex xbox_system_factory::m_factoryInstanceLock;
-std::shared_ptr<xbox_system_factory> xbox_system_factory::m_factoryInstance;
 
 std::shared_ptr<xbox_system_factory> 
 xbox_system_factory::get_factory()
 {
-    std::lock_guard<std::mutex> hold(m_factoryInstanceLock);
-    if (m_factoryInstance == nullptr)
+    auto xsapiSingleton = get_xsapi_singleton();
+    std::lock_guard<std::mutex> hold(xsapiSingleton->m_singletonLock);
+    if (xsapiSingleton->m_factoryInstance == nullptr)
     {
-        m_factoryInstance = std::make_shared<xbox_system_factory>();
+        xsapiSingleton->m_factoryInstance = std::make_shared<xbox_system_factory>();
     }
-    return m_factoryInstance;
+    return xsapiSingleton->m_factoryInstance;
 }
 
 void xbox_system_factory::set_factory(
     _In_ std::shared_ptr<xbox_system_factory> factory
     )
 {
-    std::lock_guard<std::mutex> hold(m_factoryInstanceLock);
-    m_factoryInstance = factory;
+    auto xsapiSingleton = get_xsapi_singleton();
+    std::lock_guard<std::mutex> hold(xsapiSingleton->m_singletonLock);
+    xsapiSingleton->m_factoryInstance = factory;
 }
 
-#if XSAPI_SERVER || UNIT_TEST_SYSTEM || XSAPI_U
+#if XSAPI_U
 std::shared_ptr<xsts_token_service>
 xbox_system_factory::create_xsts_token()
 {
@@ -60,14 +59,6 @@ xbox_system_factory::create_device_token()
     return std::make_shared<device_token_service_impl>();
 }
 
-#if XSAPI_SERVER
-std::shared_ptr<service_token_service>
-xbox_system_factory::create_service_token()
-{
-    return std::make_shared<service_token_service_impl>();
-}
-#endif
-
 std::shared_ptr<xtitle_service>
 xbox_system_factory::create_xtitle_service()
 {
@@ -75,27 +66,18 @@ xbox_system_factory::create_xtitle_service()
 }
 #endif
 
-std::shared_ptr<xbox_http_client> 
-xbox_system_factory::create_http_client(
-    _In_ const web::http::uri& baseUri,
-    _In_ const web::http::client::http_client_config& clientConfig
-    )
-{
-    return std::make_shared<xbox_http_client_impl>(
-        baseUri,
-        clientConfig
-        );
-}
-
 std::shared_ptr<http_call>
 xbox_system_factory::create_http_call(
     _In_ const std::shared_ptr<xbox_live_context_settings>& xboxLiveContextSettings,
-    _In_ const string_t& httpMethod,
-    _In_ const string_t& serverName,
+    _In_ const string_t& _httpMethod,
+    _In_ const string_t& _serverName,
     _In_ const web::uri& pathQueryFragment,
     _In_ xbox_live_api xboxLiveApi
     )
 {
+    xsapi_internal_string httpMethod(_httpMethod.begin(), _httpMethod.end());
+    xsapi_internal_string serverName(_serverName.begin(), _serverName.end());
+
     return std::make_shared<http_call_impl>(
         xboxLiveContextSettings, 
         httpMethod,
@@ -106,19 +88,20 @@ xbox_system_factory::create_http_call(
 }
 
 std::shared_ptr<http_call_internal>
-xbox_system_factory::create_http_call_internal(
+xbox_system_factory::create_http_call(
     _In_ const std::shared_ptr<xbox_live_context_settings>& xboxLiveContextSettings,
-    _In_ const string_t& httpMethod,
-    _In_ const string_t& serverName,
-    _In_ const web::uri& pathQueryFragment
+    _In_ const xsapi_internal_string& httpMethod,
+    _In_ const xsapi_internal_string& serverName,
+    _In_ const web::uri& pathQueryFragment,
+    _In_ xbox_live_api xboxLiveApi
     )
 {
-    return std::make_shared<http_call_impl>(
-        xboxLiveContextSettings, 
+    return xsapi_allocate_shared<http_call_impl>(
+        xboxLiveContextSettings,
         httpMethod,
         serverName,
         pathQueryFragment,
-        xbox_live_api::unspecified
+        xboxLiveApi
         );
 }
 
@@ -134,8 +117,6 @@ xbox_system_factory::create_user_impl(user_creation_context userCreationContext)
 {
 #if UWP_API
     return std::make_shared<user_impl_idp>(userCreationContext);
-#elif XSAPI_SERVER
-    return std::make_shared<user_impl_server>(userCreationContext);
 #elif XSAPI_A
     return std::make_shared<user_impl_android>();
 #else
@@ -155,7 +136,7 @@ std::shared_ptr<multiplayer::multiplayer_subscription>
 xbox_system_factory::create_multiplayer_subscription(
     _In_ const std::function<void(const multiplayer::multiplayer_session_change_event_args&)>& multiplayerSessionChangeHandler,
     _In_ const std::function<void()>& multiplayerSubscriptionLostHandler,
-    _In_ const std::function<void(const XBOX_LIVE_NAMESPACE::real_time_activity::real_time_activity_subscription_error_event_args&)>& subscriptionErrorHandler
+    _In_ const std::function<void(const xbox::services::real_time_activity::real_time_activity_subscription_error_event_args&)>& subscriptionErrorHandler
 )
 {
     return std::make_shared<multiplayer::multiplayer_subscription>(

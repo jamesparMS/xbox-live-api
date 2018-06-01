@@ -7,7 +7,7 @@
 #include "XboxLiveContext_WinRT.h"
 #include "user_context.h"
 #include "xbox_system_factory.h"
-#if !(TV_API | XBOX_UWP)
+#if !TV_API
 #include "User_WinRT.h"
 #endif
 #include "xsapi/profile.h"
@@ -21,19 +21,17 @@
 using namespace Platform;
 using namespace Windows::Foundation::Collections;
 
-#if !XSAPI_CPP && !UNIT_TEST_SERVICES
-bool g_is_xbox_live_creators_sdk = false;
-#endif
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_BEGIN
 
-#if TV_API | XBOX_UWP
+#if TV_API
 XboxLiveContext::XboxLiveContext(
     _In_ Windows::Xbox::System::User^ user
     ) 
 {
     m_cppObj = std::make_shared<xbox::services::xbox_live_context>(user);
-    
+    m_cppObj->_User_context()->set_caller_api_type(xbox::services::caller_api_type::api_winrt);
+
     Initialize();
 }
 
@@ -50,6 +48,7 @@ XboxLiveContext::XboxLiveContext(
     ) 
 {
     m_cppObj = std::make_shared<xbox::services::xbox_live_context>(user);
+    m_cppObj->_User_context()->set_caller_api_type(xbox::services::caller_api_type::api_winrt);
 
     Initialize();
 }
@@ -152,6 +151,10 @@ XboxLiveContext::Initialize()
     m_contextualSearchService = ref new ContextualSearch::ContextualSearchService(
         m_cppObj->contextual_search_service()
         );
+
+    m_clubsService = ref new Clubs::ClubsService(
+        m_cppObj->clubs_service()
+        );
 }
 
 Social::ProfileService^ 
@@ -248,6 +251,12 @@ ContextualSearch::ContextualSearchService^
 XboxLiveContext::ContextualSearchService::get()
 {
     return m_contextualSearchService;
+}
+
+Clubs::ClubsService^
+XboxLiveContext::ClubsService::get()
+{
+    return m_clubsService;
 }
 
 #if UWP_API

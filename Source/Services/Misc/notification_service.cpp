@@ -16,24 +16,22 @@ static const int32_t NUM_RETRY_TIMES = 10;
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_NOTIFICATION_CPP_BEGIN
 
-std::mutex notification_service::s_notificationSingletonLock;
-std::shared_ptr<notification_service> notification_service::s_notificationSingleton;
-
 std::shared_ptr<notification_service>
 notification_service::get_notification_service_singleton()
 {
-    std::lock_guard<std::mutex> guard(s_notificationSingletonLock);
-    if (s_notificationSingleton == nullptr)
+    auto xsapiSingleton = get_xsapi_singleton();
+    std::lock_guard<std::mutex> guard(xsapiSingleton->m_singletonLock);
+    if (xsapiSingleton->m_notificationSingleton == nullptr)
     {
 #if XSAPI_A
-        s_notificationSingleton = std::make_shared<notification_service_android>();
+        xsapiSingleton->m_notificationSingleton = std::make_shared<notification_service_android>();
 #elif XSAPI_I
-        s_notificationSingleton = std::make_shared<notification_service_ios>();
-#elif _WIN32
-        s_notificationSingleton = std::make_shared<notification_service_windows>();
+        xsapiSingleton->m_notificationSingleton = std::make_shared<notification_service_ios>();
+#elif UWP_API || TV_API
+        xsapiSingleton->m_notificationSingleton = std::make_shared<notification_service_windows>();
 #endif
     }
-    return s_notificationSingleton;
+    return xsapiSingleton->m_notificationSingleton;
 }
 
 pplx::task<xbox_live_result<void>>
@@ -107,8 +105,8 @@ notification_service::unsubscribe_from_notifications_helper(
         {
             if (t->err_code())
             {
-                LOGS_ERROR << _T("notification service attempt failed\n");
-                LOGS_ERROR << _T("http status code: ");
+                LOG_ERROR("notification service attempt failed\n");
+                LOG_ERROR("http status code: ");
                 LOGS_ERROR << t->http_status();
                 LOGS_ERROR << t->err_message().c_str();
 
@@ -150,7 +148,7 @@ notification_service::subscribe_to_notifications_helper(
     {
         payload[_T("deviceName")] = web::json::value::string(deviceName);
     }
-    payload[_T("locale")] = web::json::value::string(utils::get_locales());
+    payload[_T("locale")] = web::json::value::string(utils::string_t_from_internal_string(utils::get_locales()));
     payload[_T("titleId")] = web::json::value::string(titleId);
 
     web::json::value filterJson;
@@ -202,17 +200,13 @@ notification_service::subscribe_to_notifications_helper(
                 std::error_code errc;
                 pThis->m_endpointId = utils::extract_json_string(responseJson, _T("endpointId"), errc);
                 auto localConfig = xbox_system_factory::get_factory()->create_local_config();
-                auto localConfigResult = localConfig->write_value_to_local_storage(pThis->ENDPOINT_ID_CACHE_NAME, pThis->m_endpointId);
+                auto localConfigResult = localConfig->write_value_to_local_storage(pThis->ENDPOINT_ID_CACHE_NAME, utils::internal_string_from_string_t(pThis->m_endpointId));
                 if (localConfigResult.err())
                 {
                     LOG_ERROR("Writing endpoint id to local config failed");
                 }
                 if (t->err_code() || errc)
                 {
-                    stringstream_t str;
-                    str << _T("http status code: ");
-                    str << t->http_status();
-                    str << t->err_message().c_str();
                     return xbox_live_result<void>(errc);
                 }
 

@@ -75,7 +75,7 @@ public:
     /// This is cast as Platform::Object^ instead of Windows::UI::Core::CoreDispatcher^ to avoid the
     /// [Windows::Foundation::Metadata::WebHostHidden] requirement.
     ///
-    /// If you're calling this API from non-UI thread, parameter coreDispatcherObj is requried, so that app UI
+    /// If you're calling this API from non-UI thread, parameter coreDispatcherObj is required, so that app UI
     /// can be rendered and locale can be generated.
     /// </remarks>
     Windows::Foundation::IAsyncOperation<SignInResult^>^
@@ -95,7 +95,7 @@ public:
     /// If the app is unable to silently sign-in, the API return SignInResult with UserInteractionRequired Status .
     /// to sign-in, so the app should then call SignInAsync().
     ///
-    /// If you're calling this API from non-UI thread, parameter coreDispatcherObj is requried, so that app locale can be generated.
+    /// If you're calling this API from non-UI thread, parameter coreDispatcherObj is required, so that app locale can be generated.
     /// </remarks>
     Windows::Foundation::IAsyncOperation<SignInResult^>^
     SignInSilentlyAsync(
@@ -172,22 +172,22 @@ public:
     /// <summary>
     /// Gets a unique ID that is tied to the user's account which persists across multiple devices.
     /// </summary>
-    DEFINE_PTR_PROP_GET_STR_OBJ(XboxUserId, xbox_user_id)
+    DEFINE_PTR_PROP_GET_STR_OBJ_FROM_INTERNAL_STRING(XboxUserId, xbox_user_id)
 
     /// <summary>
     /// The Xbox Live public gamertag name associated with the user.
     /// </summary>
-    DEFINE_PTR_PROP_GET_STR_OBJ(Gamertag, gamertag)
+    DEFINE_PTR_PROP_GET_STR_OBJ_FROM_INTERNAL_STRING(Gamertag, gamertag)
 
     /// <summary>
     /// Gets the age group of the user.
     /// </summary>
-    DEFINE_PTR_PROP_GET_STR_OBJ(AgeGroup, age_group)
+    DEFINE_PTR_PROP_GET_STR_OBJ_FROM_INTERNAL_STRING(AgeGroup, age_group)
 
     /// <summary>
     /// Gets the privileges of the user.
     /// </summary>
-    DEFINE_PTR_PROP_GET_STR_OBJ(Privileges, privileges)
+    DEFINE_PTR_PROP_GET_STR_OBJ_FROM_INTERNAL_STRING(Privileges, privileges)
 
     /// <summary>
     /// Indicates if the Xbox Live user is currently signed in.
@@ -201,17 +201,17 @@ public:
     /// Check https://msdn.microsoft.com/en-us/library/windows/apps/windows.security.credentials.webaccount.aspx
     /// for more information about WebAccount
     /// </remarks>
-    DEFINE_PTR_PROP_GET_STR_OBJ(WebAccountId, web_account_id)
+    DEFINE_PTR_PROP_GET_STR_OBJ_FROM_INTERNAL_STRING(WebAccountId, web_account_id)
 
     /// <summary>
-    /// The Windows System NT user associated with the Xbox Live User, only avaliable in Multi-User application.
+    /// The Windows System NT user associated with the Xbox Live User, only available in Multi-User application.
     /// </summary>
     property Windows::System::User^ WindowsSystemUser { Windows::System::User^ get(); }
 
 internal:
     XboxLiveUser(std::shared_ptr<xbox::services::system::user_impl> user_impl);
 
-    std::shared_ptr<xbox::services::system::user_impl> GetUserImpl()
+    std::shared_ptr<xbox::services::system::user_impl> _User_impl()
     {
         return m_cppObj;
     }
@@ -220,7 +220,6 @@ internal:
 
 private:
     std::shared_ptr<xbox::services::system::user_impl> m_cppObj;
-    static UserEventBind s_userEventBind;
 };
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_SYSTEM_END

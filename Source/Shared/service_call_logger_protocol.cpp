@@ -17,26 +17,27 @@ using namespace Windows::Foundation;
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN
 
-static XBOX_LIVE_NAMESPACE::system::xbox_live_mutex g_serviceLoggerProtocolSingletonLock;
-static std::shared_ptr<service_call_logger_protocol> g_serviceLoggerProtocolSingleton;
-
 std::shared_ptr<service_call_logger_protocol> service_call_logger_protocol::get_singleton_instance()
 {
-    std::lock_guard<std::mutex> guard(g_serviceLoggerProtocolSingletonLock.get());
-    if (g_serviceLoggerProtocolSingleton == nullptr)
+    auto xsapiSingleton = xbox::services::get_xsapi_singleton();
+    std::lock_guard<std::mutex> guard(xsapiSingleton->m_serviceLoggerProtocolSingletonLock);
+    if (xsapiSingleton->m_serviceLoggerProtocolSingleton == nullptr)
     {
-        g_serviceLoggerProtocolSingleton = std::shared_ptr<service_call_logger_protocol>(new service_call_logger_protocol());
+        xsapiSingleton->m_serviceLoggerProtocolSingleton = std::shared_ptr<service_call_logger_protocol>(new service_call_logger_protocol());
     }
-    return g_serviceLoggerProtocolSingleton;
+    return xsapiSingleton->m_serviceLoggerProtocolSingleton;
 }
 
 service_call_logger_protocol::service_call_logger_protocol()
 {
+#if UWP_API || TV_API || UNIT_TEST_SERVICES
     m_onActivatedToken.Value = 0;
+#endif
 }
 
 void service_call_logger_protocol::register_for_protocol_activation()
 {
+#if UWP_API || TV_API || UNIT_TEST_SERVICES
     if (m_onActivatedToken.Value != 0)
     {
         return;
@@ -86,8 +87,10 @@ void service_call_logger_protocol::register_for_protocol_activation()
         LOG_ERROR(exMsg);
         return;
     }
+#endif
 }
 
+#if UWP_API || TV_API || UNIT_TEST_SERVICES
 void service_call_logger_protocol::process_service_call_tracking_activation_uri(_In_ Windows::Foundation::Uri^ activationUri)
 {
     WwwFormUrlDecoder^ decoder = activationUri->QueryParsed;
@@ -114,6 +117,7 @@ void service_call_logger_protocol::process_service_call_tracking_activation_uri(
         }
     }
 }
+#endif
 
 void service_call_logger_protocol::set_state_bread_crumb(_In_ bool isTracking)
 {
@@ -129,6 +133,9 @@ void service_call_logger_protocol::set_state_bread_crumb(_In_ bool isTracking)
     string_t filePath = filePathTemp;
 #endif
 
+    // Try delete the old file no matter what. So the new created file will have latest timestamp.
+    DeleteFile(filePath.c_str());
+
     if (isTracking)
     {
         std::ofstream file;
@@ -136,13 +143,9 @@ void service_call_logger_protocol::set_state_bread_crumb(_In_ bool isTracking)
 
         if (!file.is_open())
         {
-            LOGS_ERROR << _T("WriteFile failed: ") <<filePath;
+            LOGS_ERROR << "WriteFile failed: " <<filePath;
             return;
         }
-    }
-    else
-    {
-        DeleteFile(filePath.c_str());
     }
 }
 

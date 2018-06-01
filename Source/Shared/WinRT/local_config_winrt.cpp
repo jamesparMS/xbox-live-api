@@ -8,9 +8,11 @@
 #include "Utils.h"
 
 using namespace std;
+#if UWP_API || TV_API || UNIT_TEST_SERVICES
 using namespace Platform;
 using namespace Windows::Storage;
 using namespace Windows::Foundation;
+#endif
 using namespace xbox::services;
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN
@@ -18,6 +20,7 @@ NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN
 #if !TV_API
 xbox_live_result<void> local_config::read()
 {
+#if UWP_API
     std::lock_guard<std::mutex> guard(m_jsonConfigLock);
     if (m_jsonConfig.size() > 0)
     {
@@ -52,18 +55,22 @@ xbox_live_result<void> local_config::read()
             "ERROR: Could not find xboxservices.config"
             );
     }
+#else 
+    return xbox_live_result<void>();
+#endif
 }
 
-string_t local_config::get_value_from_local_storage(
-    _In_ const string_t& name
+xsapi_internal_string local_config::get_value_from_local_storage(
+    _In_ const xsapi_internal_string& name
     )
 {
+#if UWP_API
     try
     {
         ApplicationDataContainer^ localSettings = ApplicationData::Current->LocalSettings;
 
         auto values = localSettings->Values;
-        String^ key = ref new String(name.c_str());
+        String^ key = ref new String(utils::string_t_from_internal_string(name).data());
         String^ value = nullptr;
         
         if (values->HasKey(key))
@@ -73,29 +80,34 @@ string_t local_config::get_value_from_local_storage(
          
         if (!value)
         {
-            return L"";
+            return "";
         }
         else
         {
-            return value->Data();
+            return xsapi_internal_string(utils::internal_string_from_utf16(value->Data()));
         }
     }
     catch (Exception^ ex)
     {
-        return L"";
+        return "";
     }
+#else 
+    UNREFERENCED_PARAMETER(name);
+    return "";
+#endif
 }
 
-xbox_live_result<void> local_config::write_value_to_local_storage(_In_ const string_t& name, _In_ const string_t& value)
+xbox_live_result<void> local_config::write_value_to_local_storage(_In_ const xsapi_internal_string& name, _In_ const xsapi_internal_string& value)
 {
+#if UWP_API
     try
     {
         ApplicationDataContainer^ localSettings = ApplicationData::Current->LocalSettings;
 
         auto values = localSettings->Values;
         values->Insert(
-            ref new Platform::String(name.c_str()),
-            dynamic_cast<PropertyValue^>(PropertyValue::CreateString(ref new Platform::String(value.c_str())))
+            ref new Platform::String(utils::string_t_from_internal_string(name).c_str()),
+            dynamic_cast<PropertyValue^>(PropertyValue::CreateString(ref new Platform::String(utils::string_t_from_internal_string(value).c_str())))
             );
         return xbox_live_result<void>();
     }
@@ -104,16 +116,22 @@ xbox_live_result<void> local_config::write_value_to_local_storage(_In_ const str
         xbox_live_error_code err = utils::convert_exception_to_xbox_live_error_code();
         return xbox_live_result<void>(err, "write_value_to_local_storage exception");
     }
+#else 
+    UNREFERENCED_PARAMETER(name);
+    UNREFERENCED_PARAMETER(value);
+    return xbox_live_result<void>();
+#endif
 }
 
 xbox_live_result<void> local_config::delete_value_from_local_storage(
-    _In_ const string_t& name
+    _In_ const xsapi_internal_string& name
     )
 {
+#if UWP_API
     try
     {
         ApplicationDataContainer^ localSettings = ApplicationData::Current->LocalSettings;
-        localSettings->Values->Remove(ref new Platform::String(name.c_str()));
+        localSettings->Values->Remove(ref new Platform::String(utils::string_t_from_internal_string(name).c_str()));
         return xbox_live_result<void>();
     }
     catch (Exception^ ex)
@@ -121,9 +139,11 @@ xbox_live_result<void> local_config::delete_value_from_local_storage(
         xbox_live_error_code err = utils::convert_exception_to_xbox_live_error_code();
         return xbox_live_result<void>(err, "delete_value_from_local_storage exception");
     }
+#else
+    UNREFERENCED_PARAMETER(name);
+    return xbox_live_result<void>();
+#endif
 }
-
-
 #endif
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_END

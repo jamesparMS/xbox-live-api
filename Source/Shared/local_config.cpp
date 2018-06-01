@@ -22,18 +22,18 @@ std::shared_ptr<local_config> local_config::get_local_config_singleton()
     auto xsapiSingleton = get_xsapi_singleton();
     bool needToReadConfig = false;
     {
-        std::lock_guard<std::mutex> guard(xsapiSingleton->s_singletonLock);
-        if (xsapiSingleton->s_localConfigSingleton == nullptr)
+        std::lock_guard<std::mutex> guard(xsapiSingleton->m_singletonLock);
+        if (xsapiSingleton->m_localConfigSingleton == nullptr)
         {
             needToReadConfig = true; 
-            xsapiSingleton->s_localConfigSingleton = std::make_shared<local_config>();
+            xsapiSingleton->m_localConfigSingleton = std::make_shared<local_config>();
         }
     }
 
     if (needToReadConfig)
     {
 #if !TV_API
-        xbox_live_result<void> configResult = xsapiSingleton->s_localConfigSingleton->read();
+        xbox_live_result<void> configResult = xsapiSingleton->m_localConfigSingleton->read();
         if (configResult.err())
         {
             LOGS_ERROR << "Loading local config file error: " << configResult.err() << ", msg:" << configResult.err_message();
@@ -41,7 +41,7 @@ std::shared_ptr<local_config> local_config::get_local_config_singleton()
         }
 #endif
     }
-    return xsapiSingleton->s_localConfigSingleton;
+    return xsapiSingleton->m_localConfigSingleton;
 }
 
 local_config::local_config()
@@ -50,7 +50,7 @@ local_config::local_config()
 
 #if !TV_API
 uint64_t local_config::get_uint64_from_config(
-    _In_ const string_t& name,
+    _In_ const xsapi_internal_string& name,
     _In_ bool required,
     _In_ uint64_t defaultValue
     )
@@ -59,18 +59,18 @@ uint64_t local_config::get_uint64_from_config(
     return utils::extract_json_uint52(m_jsonConfig, name.c_str(), required, defaultValue);
 }
 
-string_t local_config::get_value_from_config(
-    _In_ const string_t& name,
+xsapi_internal_string local_config::get_value_from_config(
+    _In_ const xsapi_internal_string& name,
     _In_ bool required,
-    _In_ const string_t& defaultValue
+    _In_ const xsapi_internal_string& defaultValue
     )
 {
     std::lock_guard<std::mutex> guard(m_jsonConfigLock);
-    return utils::extract_json_string(m_jsonConfig, name.c_str(), required, defaultValue);
+    return utils::extract_json_string(m_jsonConfig, name, required, defaultValue);
 }
 
 bool local_config::get_bool_from_config(
-    _In_ const string_t& name,
+    _In_ const xsapi_internal_string& name,
     _In_ bool required,
     _In_ bool defaultValue
     )
@@ -78,7 +78,7 @@ bool local_config::get_bool_from_config(
     std::lock_guard<std::mutex> guard(m_jsonConfigLock);
 
     std::error_code err;
-    auto value = utils::extract_json_field(m_jsonConfig, name.c_str(), err, required);
+    auto value = utils::extract_json_field(m_jsonConfig, name, err, required);
 
     // the value could be "0", "1", or true false
     if (value.is_boolean())
@@ -97,18 +97,18 @@ bool local_config::get_bool_from_config(
 
 uint32_t local_config::title_id()
 {
-    uint64_t titleId = get_uint64_from_config(_T("TitleId"), false, 0);
+    uint64_t titleId = get_uint64_from_config("TitleId", false, 0);
 
     // Also support title id in string dec form or string hex form 
     if (titleId == 0)
     {
-        string_t titleIdString = get_value_from_config(_T("TitleId"), false, _T(""));
+        xsapi_internal_string titleIdString = get_value_from_config("TitleId", false, "");
         if (!titleIdString.empty())
         {
-            titleId = utils::string_t_to_uint64(titleIdString);
+            titleId = utils::internal_string_to_uint64(titleIdString);
             if (titleId == 0)
             {
-                stringstream_t ss;
+                xsapi_internal_stringstream ss;
                 ss << std::hex << titleIdString;
                 ss >> titleId;
             }
@@ -118,66 +118,76 @@ uint32_t local_config::title_id()
     return static_cast<uint32_t>(titleId);
 }
 
-string_t local_config::scid()
+xsapi_internal_string local_config::scid()
 {
-    return get_value_from_config(_T("PrimaryServiceConfigId"), false, _T(""));
+    return get_value_from_config("PrimaryServiceConfigId", false, "");
 }
 
 uint32_t local_config::override_title_id()
 {
-    uint64_t titleId = get_uint64_from_config(_T("OverrideTitleId"), false, 0);
+    uint64_t titleId = get_uint64_from_config("OverrideTitleId", false, 0);
     return static_cast<uint32_t>(titleId);
 }
 
-string_t local_config::override_scid()
+xsapi_internal_string local_config::override_scid()
 {
-    return get_value_from_config(_T("OverrideServiceConfigId"), false, _T(""));
+    return get_value_from_config("OverrideServiceConfigId", false, "");
 }
 
-string_t local_config::environment_prefix()
+xsapi_internal_string local_config::environment_prefix()
 {
-    return get_value_from_config(_T("EnvironmentPrefix"), false, _T(""));
+    return get_value_from_config("EnvironmentPrefix", false, "");
 }
 
-string_t local_config::environment()
+xsapi_internal_string local_config::environment()
 {
-    string_t environment = get_value_from_config(_T("Environment"), false, _T(""));
+    xsapi_internal_string environment = get_value_from_config("Environment", false, "");
     if (!environment.empty())
     {
-        if (environment[0] != _T('.'))
+        if (environment[0] != '.')
         {
-            environment = _T(".") + environment;
+            environment = "." + environment;
         }
     }
 
     return environment;
 }
 
-string_t local_config::sandbox()
+xsapi_internal_string local_config::sandbox()
 {
-    return get_value_from_config(_T("Sandbox"), false, _T("RETAIL"));
+    return get_value_from_config("Sandbox", false, "RETAIL");
 }
 
-string_t local_config::client_secret()
+xsapi_internal_string local_config::client_secret()
 {
-    return get_value_from_config(_T("ClientSecret"), false, _T(""));
+    return get_value_from_config("ClientSecret", false, "");
 }
 
 bool local_config::use_first_party_token()
 {
-    return get_bool_from_config(_T("FirstParty"), false, false);
+    return get_bool_from_config("FirstParty", false, false);
 }
 
 bool local_config::is_creators_title()
 {
-    return get_bool_from_config(_T("XboxLiveCreatorsTitle"), false, false);
+    return get_bool_from_config("XboxLiveCreatorsTitle", false, false);
 }
 
+xsapi_internal_string local_config::msa_sub_target()
+{
+    return get_value_from_config("MsaSubTarget", false, "");
+}
+
+xsapi_internal_string local_config::scope()
+{
+    xsapi_internal_string defaultScope = is_creators_title() ? "xbl.signin xbl.friends" : "xboxlive.signin";
+    return get_value_from_config("Scope", false, defaultScope);
+}
 
 #if XSAPI_I
-string_t local_config::apns_environment()
+xsapi_internal_string local_config::apns_environment()
 {
-    return get_value_from_config(_T("ApnsEnvironment"), false, _T("apnsProduction"));
+    return get_value_from_config("ApnsEnvironment", false, "apnsProduction");
 }
 #endif
 

@@ -11,8 +11,6 @@
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN
 
-static string_t s_locales = _T("en-US");
-
 #if XSAPI_A
 std::unordered_map<string_t, string_t> serviceLocales = 
 { 
@@ -111,21 +109,22 @@ std::unordered_map<string_t, string_t> serviceLocales =
 
 #ifdef _WIN32
 // Locale api for desktop and xbox
-#if WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP | TV_API | XBOX_UWP
+#if WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP | TV_API
 
-std::vector<string_t> utils::get_locale_list()
+xsapi_internal_vector<xsapi_internal_string> utils::get_locale_list()
 {
-    std::vector<string_t> localeList;
+    xsapi_internal_vector<xsapi_internal_string> localeList;
 
-    TCHAR localeName[LOCALE_NAME_MAX_LENGTH] = { 0 };
+    char_t localeName[LOCALE_NAME_MAX_LENGTH] = { 0 };
+    auto localeLen = GetUserDefaultLocaleName(localeName, ARRAYSIZE(localeName));
 
-    if (GetUserDefaultLocaleName(localeName, ARRAYSIZE(localeName)))
+    if (localeLen > 0)
     {
-        localeList.push_back(localeName);
+        localeList.push_back(utils::internal_string_from_char_t(localeName));
     }
     else
     {
-        localeList.push_back(_T("en-US"));
+        localeList.push_back("en-US");
     }
 
     return localeList;
@@ -133,9 +132,9 @@ std::vector<string_t> utils::get_locale_list()
 
 #else // #else WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
 
-std::vector<string_t> utils::get_locale_list()
+xsapi_internal_vector<xsapi_internal_string> utils::get_locale_list()
 {
-    std::vector<string_t> localeList;
+    xsapi_internal_vector<xsapi_internal_string> localeList;
 
     try
     {
@@ -144,13 +143,13 @@ std::vector<string_t> utils::get_locale_list()
         auto languages = resourceContext->Languages;
         for (auto language : languages)
         {
-            localeList.push_back(language->Data());
+            localeList.push_back(utils::internal_string_from_utf16(language->Data()));
         }
     }
     catch (...)
     {
         LOG_ERROR("Failed to get system locale, fall back to en-US");
-        localeList.push_back(_T("en-US"));
+        localeList.push_back("en-US");
     }
 
     return localeList;
@@ -164,6 +163,7 @@ std::vector<string_t> utils::get_locale_list()
 {
     auto javaInterop = java_interop::get_java_interop_singleton();
     std::vector<string_t> localeList;
+    rwlock_guard guard(javaInterop->java_interop_singletonLock, false);
     auto javaVM = javaInterop->get_java_vm();
     if (javaVM == nullptr)
     {
@@ -201,8 +201,8 @@ std::vector<string_t> utils::get_locale_list()
 
 void utils::generate_locales()
 {
-    std::vector<string_t> localeList = get_locale_list();
-    std::vector<string_t> localeFallbackList;
+    xsapi_internal_vector<xsapi_internal_string> localeList = get_locale_list();
+    xsapi_internal_vector<xsapi_internal_string> localeFallbackList;
 
     for (auto& locale : localeList)
     {
@@ -212,54 +212,54 @@ void utils::generate_locales()
         // fallback chain is going to be:
         // fr-ml -> fr -> zh-hans -> zh -> en-us -> en
         localeFallbackList.push_back(locale);
-        size_t nPos = locale.rfind(_T("-"));
-        while (nPos != string_t::npos)
+        size_t nPos = locale.rfind("-");
+        while (nPos != xsapi_internal_string::npos)
         {
             localeFallbackList.push_back(locale.substr(0, nPos));
-            nPos = locale.rfind(_T("-"), nPos - 1);
+            nPos = locale.rfind("-", nPos - 1);
         }
     }
-    s_locales.clear();
+    auto xsapiSingleton = xbox::services::get_xsapi_singleton();
+    xsapiSingleton->m_locales.clear();
     for (auto& locale : localeFallbackList)
     {
-        s_locales += locale;
-        s_locales += _T(',');
+        xsapiSingleton->m_locales += locale;
+        xsapiSingleton->m_locales += ',';
     }
     // erase the last ','
-    s_locales.pop_back();
+    xsapiSingleton->m_locales.pop_back();
 }
 
-static std::mutex s_locale_lock;
-static bool s_custom_locale_override = false;
-
-const string_t& utils::get_locales()
+const xsapi_internal_string& utils::get_locales()
 {
-    std::lock_guard<std::mutex> guard(s_locale_lock);
-    if (s_custom_locale_override)
+    auto xsapiSingleton = xbox::services::get_xsapi_singleton();
+    std::lock_guard<std::mutex> guard(xsapiSingleton->m_locale_lock);
+    if (xsapiSingleton->m_custom_locale_override)
     {
-        return s_locales;
+        return xsapiSingleton->m_locales;
     }
-    // For WinRT app, locale can only be get from STA, thus we generate locale in UI dispacther assignment.
+    // For WinRT app, locale can only be get from STA, thus we generate locale in UI dispatcher assignment.
     // For desktop and xbox, we generate locale on the first call.
-#if WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP | TV_API | XBOX_UWP
-    static bool localeGenerated = false;
-    if (!localeGenerated)
+#if WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP | TV_API
+    static bool s_localeGenerated = false;
+    if (!s_localeGenerated)
     {
         generate_locales();
-        localeGenerated = true;
+        s_localeGenerated = true;
     }
 #endif
 
-    return s_locales;
+    return xsapiSingleton->m_locales;
 }
 
 
 void utils::set_locales(
-    _In_ const string_t& locale
+    _In_ const xsapi_internal_string& locale
     )
 {
-    s_locales = locale;
-    s_custom_locale_override = true;
+    auto xsapiSingleton = xbox::services::get_xsapi_singleton();
+    xsapiSingleton->m_locales = locale;
+    xsapiSingleton->m_custom_locale_override = true;
 }
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_END

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #include "pch.h"
-#define TEST_CLASS_OWNER L"blgross"
+#define TEST_CLASS_OWNER L"jasonsa"
 #define TEST_CLASS_AREA L"ErrorTests"
 #include "UnitTestIncludes.h"
 #include <xsapi/xbox_live_context.h>
@@ -281,7 +281,7 @@ public:
     {
         DEFINE_TEST_CASE_PROPERTIES(TestHttpErrors);
         auto mockXblContext = GetMockXboxLiveContext_Cpp();
-        m_mockXboxSystemFactory->GetMockHttpCall()->ResultValue = StockMocks::CreateMockHttpCallResponse(L"", 404);
+        m_mockXboxSystemFactory->GetMockHttpCall()->ResultValueInternal = StockMocks::CreateMockHttpCallResponseInternal(L"", 404);
 
         mockXblContext->achievement_service().get_achievement(
             L"1234",
@@ -296,7 +296,7 @@ public:
         }).wait();
         
         auto jsonResult = web::json::value::parse(errorResponse);
-        m_mockXboxSystemFactory->GetMockHttpCall()->ResultValue = StockMocks::CreateMockHttpCallResponse(jsonResult, 200);
+        m_mockXboxSystemFactory->GetMockHttpCall()->ResultValueInternal = StockMocks::CreateMockHttpCallResponseInternal(jsonResult, 200);
 
         mockXblContext->achievement_service().get_achievement(
             L"1234",

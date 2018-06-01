@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #include "pch.h"
-#define TEST_CLASS_OWNER L"blgross"
+#define TEST_CLASS_OWNER L"jasonsa"
 #define TEST_CLASS_AREA L"SocialManager"
 #include "UnitTestIncludes.h"
 #include "RtaTestHelper.h"
@@ -13,6 +13,7 @@
 #include "SocialUserGroupLoadedEventArgs_WinRT.h"
 #include "MockSocialManager.h"
 #include "SocialManagerHelper.h"
+#include "Event_WinRT.h"
 
 using namespace xbox::services;
 using namespace xbox::services::presence;
@@ -20,6 +21,7 @@ using namespace xbox::services::real_time_activity;
 using namespace xbox::services::social::manager;
 using namespace Microsoft::Xbox::Services::Social::Manager;
 using namespace Microsoft::Xbox::Services::Presence;
+using namespace Microsoft::Xbox::Services::System;
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_SYSTEM_CPP_BEGIN
 
@@ -271,10 +273,10 @@ public:
     {
         std::unordered_map<string_t, std::shared_ptr<HttpResponseStruct>> responses;
         auto responseStruct = GetPresenceResponseStruct(devicePresenceResponse);
-        responseStruct->fRequestPostFunc = [](std::shared_ptr<http_call_response>& initialCallResponse, const string_t& requestBody)
+        responseStruct->fRequestPostFuncInternal = [](std::shared_ptr<http_call_response_internal>& initialCallResponse, const xsapi_internal_string& requestBody)
         {
             std::error_code errc;
-            auto jsonRequest = web::json::value::parse(requestBody, errc);
+            auto jsonRequest = web::json::value::parse(utils::string_t_from_internal_string(requestBody), errc);
             if (errc)
             {
                 return;
@@ -290,7 +292,7 @@ public:
                 newResponse[i] = responseTemplate;
             }
 
-            initialCallResponse->_Set_response_body(newResponse);
+            initialCallResponse->set_response_body(newResponse);
         };
         responses[_T("https://userpresence.mockenv.xboxlive.com")] = responseStruct;
         m_mockXboxSystemFactory->add_http_state_response(responses);
@@ -338,7 +340,7 @@ public:
         m_mockXboxSystemFactory->add_websocket_state_responses_to_all_clients(websocketResponseQueue, tce);
     }
 
-    void TestDevicePresenceChange(const std::vector<Platform::String^> userList, const pplx::task_completion_event<void>& tce, const string_t& devicePresenceResponse)
+    void TestDevicePresenceChange(const std::vector<Platform::String^> userList, const pplx::task_completion_event<void>& tce, const string_t& tdevicePresenceResponse)
     {
         std::vector<Platform::String^> uriList;
         for (auto user : userList)
@@ -347,7 +349,7 @@ public:
             uriList.push_back(stream);
         }
 
-        auto mockEvents = GenerateMockEvents(uriList, devicePresenceResponse, real_time_activity_message_type::change_event);
+        auto mockEvents = GenerateMockEvents(uriList, tdevicePresenceResponse, real_time_activity_message_type::change_event);
         m_mockXboxSystemFactory->add_websocket_state_responses_to_all_clients(mockEvents, tce);
     }
 
@@ -376,22 +378,23 @@ public:
     std::shared_ptr<HttpResponseStruct> GetPeoplehubResponseStruct(const web::json::value& initJSON, int errorNum = 200)
     {
         // Set up initial http responses
-        auto peoplehubResponse = StockMocks::CreateMockHttpCallResponse(initJSON, errorNum);
+        auto peoplehubResponse2 = StockMocks::CreateMockHttpCallResponseInternal(initJSON, errorNum);
         std::shared_ptr<HttpResponseStruct> peoplehubResponseStruct = std::make_shared<HttpResponseStruct>();
-        peoplehubResponseStruct->responseList = { peoplehubResponse };
+        peoplehubResponseStruct->responseListInternal = { peoplehubResponse2 };
         return peoplehubResponseStruct;
     }
 
     std::shared_ptr<HttpResponseStruct> GetPresenceResponseStruct(const web::json::value& initJSON, int errorNum = 200)
     {
-        auto presenceResponse = StockMocks::CreateMockHttpCallResponse(initJSON, errorNum);
+        auto presenceResponse = StockMocks::CreateMockHttpCallResponseInternal(initJSON, errorNum);
         std::shared_ptr<HttpResponseStruct> presenceResponseStruct = std::make_shared<HttpResponseStruct>();
-        presenceResponseStruct->responseList = { presenceResponse };
+        presenceResponseStruct->responseListInternal = { presenceResponse };
         return presenceResponseStruct;
     }
 
     SocialManagerInitializationStruct InitializeSocialManager(const std::shared_ptr<xbox_live_context>& xboxLiveContext, bool initPresenceOnline)
     {
+        UNREFERENCED_PARAMETER(initPresenceOnline);
         std::unordered_map<string_t, std::shared_ptr<HttpResponseStruct>> responses;
 
         auto peoplehubResponseJson = GenerateInitialPeoplehubJSON();
@@ -476,6 +479,7 @@ public:
 
     SocialManagerInitializationStruct Initialize(std::shared_ptr<xbox_live_context> xboxLiveContext, bool initPresenceOnline, int httpErrorCode = 200)
     {
+        UNREFERENCED_PARAMETER(httpErrorCode);
         LOG_DEBUG("Initalizing");
         auto socialManagerInitializationStruct = InitializeSocialManager(xboxLiveContext, initPresenceOnline);
 
@@ -485,6 +489,7 @@ public:
 
         LOG_DEBUG("Subs initialized");
         socialManagerInitializationStruct.socialEvents.clear();
+        
         while (true)  // todo: find other way to confirm subs
         {
             AppendToPendingEvents(socialManagerInitializationStruct.socialManager->DoWork(), socialManagerInitializationStruct);
@@ -544,7 +549,7 @@ public:
 
     DEFINE_TEST_CASE(TestInitialize)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerInitialize);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerInitialize);
 
         //while (true)
         {
@@ -558,7 +563,7 @@ public:
     // Verifies that properties of multiple xbox social user are set correctly
     DEFINE_TEST_CASE(TestSocialManagerXboxSocialUser)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerXboxSocialUser);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerXboxSocialUser);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, true);
@@ -624,7 +629,7 @@ public:
     // Tests all basic features of social manager. Initialization, destruction, verification of social user group, and changes to device presence and social graph changes
     DEFINE_TEST_CASE(TestSocialManagerInitialization)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerInitialization);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerInitialization);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, true);
@@ -818,11 +823,11 @@ public:
     // Tests to verify that multiple local users can be added, initialized correctly, and do not conflict in data
     DEFINE_TEST_CASE(TestSocialManagerMultipleLocalUser)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerMultipleLocalUser);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerMultipleLocalUser);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto xboxLiveContext1 = GetMockXboxLiveContext_Cpp();
-        xboxLiveContext1->user()->GetUserImpl()->_Set_xbox_user_id(L"T0");
+        xboxLiveContext1->user()->_User_impl()->_Set_xbox_user_id("T0");
         auto socialManagerInitializationStruct1 = Initialize(xboxLiveContext1, true);
         auto socialManagerCppMock = std::dynamic_pointer_cast<MockSocialManager>(socialManagerInitializationStruct1.socialManager->GetCppObj());
 
@@ -993,7 +998,7 @@ public:
     // Tests to verify that multiple local users can create groups and have groups update properly
     DEFINE_TEST_CASE(TestSocialManagerMultipleLocalUserWithGroups)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerMultipleLocalUserWithGroups);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerMultipleLocalUserWithGroups);
         m_mockXboxSystemFactory->reinit();
         auto mockSockets = m_mockXboxSystemFactory->AddMultipleMockWebSocketClients(2);
         const std::wstring rtaConnectionIdJson =
@@ -1005,7 +1010,7 @@ public:
         SetMultipleClientWebSocketRTAAutoResponser(mockSockets, rtaConnectionIdJson, -1, false);
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto xboxLiveContext1 = GetMockXboxLiveContext_Cpp();
-        xboxLiveContext1->user()->GetUserImpl()->_Set_xbox_user_id(L"T0");
+        xboxLiveContext1->user()->_User_impl()->_Set_xbox_user_id("T0");
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, false);
         auto socialManagerInitializationStruct1 = Initialize(xboxLiveContext1, false);
         auto socialManagerCppMock = std::dynamic_pointer_cast<MockSocialManager>(socialManagerInitializationStruct1.socialManager->GetCppObj());
@@ -1101,10 +1106,10 @@ public:
         counter = 0;
         do
         {
-            auto changeList = socialManager->DoWork();
-            LogSocialManagerEvents(changeList);
+            auto changeList2 = socialManager->DoWork();
+            LogSocialManagerEvents(changeList2);
 
-            for (auto evt : changeList)
+            for (auto evt : changeList2)
             {
                 if (evt->EventType == SocialEventType::SocialUserGroupLoaded)
                 {
@@ -1184,7 +1189,7 @@ public:
     // Tests race condition in adding then removing a local user before adding is complete
     DEFINE_TEST_CASE(TestSocialManagerAddRemoveLocalUser)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerAddRemoveCallback);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerAddRemoveCallback);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, false);
@@ -1199,7 +1204,7 @@ public:
     // Tests device presence change tap
     DEFINE_TEST_CASE(TestSocialManagerPresenceCallback)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerPresenceCallback);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerPresenceCallback);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, false);
@@ -1211,9 +1216,9 @@ public:
         std::unordered_map<string_t, std::shared_ptr<HttpResponseStruct>> responses;
         auto devicePresenceResponseCopy = devicePresenceResponse;
         devicePresenceResponseCopy[0][L"state"] = web::json::value::string(L"Offline");
-        auto presenceResponse = StockMocks::CreateMockHttpCallResponse(devicePresenceResponseCopy);
+        auto presenceResponse = StockMocks::CreateMockHttpCallResponseInternal(devicePresenceResponseCopy);
         auto presenceResponseStruct = std::make_shared<HttpResponseStruct>();
-        presenceResponseStruct->responseList = { presenceResponse };
+        presenceResponseStruct->responseListInternal = { presenceResponse };
 
         responses[_T("https://userpresence.mockenv.xboxlive.com")] = presenceResponseStruct;
 
@@ -1272,7 +1277,7 @@ public:
     // Tests users added tap
     DEFINE_TEST_CASE(TestSocialManagerUsersAddedCallback)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerUsersAddedCallback);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerUsersAddedCallback);
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         m_mockXboxSystemFactory->reinit();
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, true);
@@ -1282,9 +1287,9 @@ public:
         web::json::value jsonArray = web::json::value::array();
         jsonArray[0] = defaultPeoplehubTemplate;
         returnObject[L"people"] = jsonArray;
-        auto relationshipAddedResponse = StockMocks::CreateMockHttpCallResponse(returnObject);
+        auto relationshipAddedResponse = StockMocks::CreateMockHttpCallResponseInternal(returnObject);
         auto relationshipAddedStruct = std::make_shared<HttpResponseStruct>();
-        relationshipAddedStruct->responseList = { relationshipAddedResponse };
+        relationshipAddedStruct->responseListInternal = { relationshipAddedResponse };
 
         responses[_T("https://peoplehub.mockenv.xboxlive.com")] = relationshipAddedStruct;
         m_mockXboxSystemFactory->add_http_state_response(responses, false);
@@ -1357,7 +1362,7 @@ public:
     // Tests behavior of user group from filter
     DEFINE_TEST_CASE(TestSocialManagerSocialUserGroupFromFilter)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerSocialUserGroupFromFilter);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerSocialUserGroupFromFilter);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
 
@@ -1435,7 +1440,7 @@ public:
     // Tests behavior of user group from list
     DEFINE_TEST_CASE(TestSocialManagerSocialUserGroupFromList)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerSocialUserGroupFromList);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerSocialUserGroupFromList);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
 
@@ -1471,7 +1476,7 @@ public:
                     for (auto user : evt->UsersAffected)
                     {
                         bool userFound = false;
-                        for (auto& stringUser : vec)
+                        for (const auto& stringUser : vec)
                         {
                             if (user == stringUser)
                             {
@@ -1520,7 +1525,7 @@ public:
 
     DEFINE_TEST_CASE(TestSocialUserGroupFromListLarge)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialUserGroupFromListLarge);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialUserGroupFromListLarge);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
 
@@ -1560,7 +1565,7 @@ public:
 
                     VERIFY_ARE_EQUAL_UINT(vec->Size, socialUserGroupLoaded->SocialUserGroup->UsersTrackedBySocialUserGroup->Size);
                     //VERIFY_ARE_EQUAL(vec->Size, socialUserGroupLoaded->SocialUserGroup->Users->Size);
-                    for (auto& user : vec)
+                    for (const auto& user : vec)
                     {
                         bool userFound = false;
                         for (auto stringUser : socialUserGroupLoaded->SocialUserGroup->UsersTrackedBySocialUserGroup)
@@ -1591,7 +1596,7 @@ public:
     // Tests refresh for RTA resync
     DEFINE_TEST_CASE(TestSocialManagerResync)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerResync);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerResync);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
 
@@ -1613,7 +1618,8 @@ public:
         auto peoplehubResponseJson = GenerateInitialPeoplehubJSON();
         auto responseStruct = GetPeoplehubResponseStruct(peoplehubResponseJson, 200);
         peoplehubResponseJson[L"people"][0][L"gamertag"] = web::json::value::string(testTag);
-        responseStruct->responseList[0]->_Set_response_body(peoplehubResponseJson);
+
+        responseStruct->responseListInternal[0]->set_response_body(peoplehubResponseJson);
 
         std::unordered_map<string_t, std::shared_ptr<HttpResponseStruct>> responses;
 
@@ -1679,7 +1685,7 @@ public:
     // Tests updating a social user group that was already created from list
     DEFINE_TEST_CASE(TestSocialManagerUserUpdate)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerUserUpdate);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerUserUpdate);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, true);
@@ -1852,7 +1858,7 @@ public:
 
     DEFINE_TEST_CASE(TestSocialManagerErrorWithInvalidArgs)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerErrorWithInvalidArgs);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerErrorWithInvalidArgs);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
 
@@ -1898,7 +1904,7 @@ public:
 
     DEFINE_TEST_CASE(TestSocialManagerErrorImproperCallingOrder)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerErrorImproperCallingOrder);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerErrorImproperCallingOrder);
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
 
         Platform::Collections::Vector<Platform::String^>^ socialUserList = ref new Platform::Collections::Vector<Platform::String^>({ _T("A"), _T("B"), _T("C") });
@@ -1920,7 +1926,7 @@ public:
 
     DEFINE_TEST_CASE(TestSocialManagerHTTPFailure)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerHTTPFailure);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerHTTPFailure);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
 
@@ -1958,7 +1964,7 @@ public:
     // Verifies internal values from internal social groups
     DEFINE_TEST_CASE(TestSocialManagerCreateDestroyGroup)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerCreateDestroyGroup);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerCreateDestroyGroup);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, false);
@@ -2052,23 +2058,34 @@ public:
     // Make sure memory is alloced correctly for the user buffer holder internal structure
     DEFINE_TEST_CASE(TestSocialManagerUserBufferHolder)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerUserBufferHolder);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerUserBufferHolder);
         auto peopleHubService = SocialManagerHelper::GetPeoplehubService();
         auto httpCall = m_mockXboxSystemFactory->GetMockHttpCall();
-        httpCall->ResultValue = StockMocks::CreateMockHttpCallResponse(web::json::value::parse(peoplehubResponse));
+        httpCall->ResultValueInternal = StockMocks::CreateMockHttpCallResponseInternal(web::json::value::parse(peoplehubResponse));
 
+
+        xsapi_internal_vector<xsapi_internal_string> xuids;
+        xuids.push_back("1");
+
+        Event^ callComplete = ref new Event();
         user_buffers_holder userBufferHolder;
+        size_t userGroupSize;
 
-        std::vector<string_t> xuids;
-        xuids.push_back(_T("1"));
-        auto userGroup = peopleHubService.get_social_graph(_T("TestXboxUserId"), social_manager_extra_detail_level::preferred_color_level, xuids).get();
-        VERIFY_IS_TRUE(!userGroup.err());
+        peopleHubService.get_social_graph("TestXboxUserId", social_manager_extra_detail_level::preferred_color_level, xuids, 0,
+            [&callComplete, &userBufferHolder, &userGroupSize](xbox_live_result<xsapi_internal_vector<xbox_social_user>> userGroup)
+        {
+            VERIFY_IS_TRUE(!userGroup.err());
 
-        userBufferHolder.initialize(userGroup.payload());
-        size_t userGroupSize = userGroup.payload().size();
+            userBufferHolder.initialize(userGroup.payload());
+            userGroupSize = userGroup.payload().size();
 
-        VERIFY_IS_TRUE(&userBufferHolder.user_buffer_a() == userBufferHolder.active_buffer());
-        VERIFY_IS_TRUE(&userBufferHolder.user_buffer_b() == userBufferHolder.inactive_buffer());
+            VERIFY_IS_TRUE(&userBufferHolder.user_buffer_a() == userBufferHolder.active_buffer());
+            VERIFY_IS_TRUE(&userBufferHolder.user_buffer_b() == userBufferHolder.inactive_buffer());
+
+            callComplete->Set();
+        });
+
+        callComplete->Wait();
 
         VerifyUserBuffer(userBufferHolder.user_buffer_a(), userGroupSize);
         VerifyUserBuffer(userBufferHolder.user_buffer_b(), userGroupSize);
@@ -2076,25 +2093,36 @@ public:
 
     DEFINE_TEST_CASE(TestSocialManagerUserBufferAddUsersWithNoInit)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerUserBufferAddUsersWithNoInit);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerUserBufferAddUsersWithNoInit);
         auto peopleHubService = SocialManagerHelper::GetPeoplehubService();
         auto httpCall = m_mockXboxSystemFactory->GetMockHttpCall();
-        httpCall->ResultValue = StockMocks::CreateMockHttpCallResponse(web::json::value::parse(peoplehubResponse));
+        httpCall->ResultValueInternal = StockMocks::CreateMockHttpCallResponseInternal(web::json::value::parse(peoplehubResponse));
 
+        xsapi_internal_vector<xsapi_internal_string> xuids;
+        xuids.push_back("1");
+
+        Event^ callComplete = ref new Event();
         user_buffers_holder userBufferHolder;
+        size_t userGroupSize;
 
-        std::vector<string_t> xuids;
-        xuids.push_back(_T("1"));
-        auto userGroup = peopleHubService.get_social_graph(_T("TestXboxUserId"), social_manager_extra_detail_level::preferred_color_level, xuids).get();
-        VERIFY_IS_TRUE(!userGroup.err());
+        peopleHubService.get_social_graph("TestXboxUserId", social_manager_extra_detail_level::preferred_color_level, xuids, 0,
+            [&callComplete, &userBufferHolder, &userGroupSize](xbox_live_result<xsapi_internal_vector<xbox_social_user>> userGroup)
+        {
+            VERIFY_IS_TRUE(!userGroup.err());
 
-        userBufferHolder.initialize(std::vector<xbox_social_user>());
-        userBufferHolder.add_users_to_buffer(userGroup.payload(), *userBufferHolder.inactive_buffer());
-        userBufferHolder.add_users_to_buffer(userGroup.payload(), *userBufferHolder.active_buffer());
-        size_t userGroupSize = userGroup.payload().size();
+            userBufferHolder.initialize(xsapi_internal_vector<xbox_social_user>());
+            userBufferHolder.add_users_to_buffer(userGroup.payload(), *userBufferHolder.inactive_buffer());
+            userBufferHolder.add_users_to_buffer(userGroup.payload(), *userBufferHolder.active_buffer());
+            userGroupSize = userGroup.payload().size();
 
-        VERIFY_IS_TRUE(&userBufferHolder.user_buffer_a() == userBufferHolder.active_buffer());
-        VERIFY_IS_TRUE(&userBufferHolder.user_buffer_b() == userBufferHolder.inactive_buffer());
+            VERIFY_IS_TRUE(&userBufferHolder.user_buffer_a() == userBufferHolder.active_buffer());
+            VERIFY_IS_TRUE(&userBufferHolder.user_buffer_b() == userBufferHolder.inactive_buffer());
+
+            callComplete->Set();
+
+        });
+
+        callComplete->Wait();
 
         VerifyUserBuffer(userBufferHolder.user_buffer_a(), userGroupSize);
         VerifyUserBuffer(userBufferHolder.user_buffer_b(), userGroupSize);
@@ -2102,16 +2130,16 @@ public:
 
     DEFINE_TEST_CASE(TestSocialManagerUserBufferAddUsersNoData)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerUserBufferAddUsersNoData);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerUserBufferAddUsersNoData);
         auto peopleHubService = SocialManagerHelper::GetPeoplehubService();
         auto httpCall = m_mockXboxSystemFactory->GetMockHttpCall();
-        httpCall->ResultValue = StockMocks::CreateMockHttpCallResponse(web::json::value::parse(peoplehubResponse));
+        httpCall->ResultValueInternal = StockMocks::CreateMockHttpCallResponseInternal(web::json::value::parse(peoplehubResponse));
 
         user_buffers_holder userBufferHolder;
 
-        userBufferHolder.initialize(std::vector<xbox_social_user>());
-        userBufferHolder.add_users_to_buffer(std::vector<xbox_social_user>(), *userBufferHolder.inactive_buffer());
-        userBufferHolder.add_users_to_buffer(std::vector<xbox_social_user>(), *userBufferHolder.active_buffer());
+        userBufferHolder.initialize(xsapi_internal_vector<xbox_social_user>());
+        userBufferHolder.add_users_to_buffer(xsapi_internal_vector<xbox_social_user>(), *userBufferHolder.inactive_buffer());
+        userBufferHolder.add_users_to_buffer(xsapi_internal_vector<xbox_social_user>(), *userBufferHolder.active_buffer());
 
         VERIFY_IS_TRUE(&userBufferHolder.user_buffer_a() == userBufferHolder.active_buffer());
         VERIFY_IS_TRUE(&userBufferHolder.user_buffer_b() == userBufferHolder.inactive_buffer());
@@ -2126,7 +2154,7 @@ public:
     // Verifies that get_user_copy API (C++ only) works properly in copying the data
     DEFINE_TEST_CASE(TestSocialManagerUserGroupCopy)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerUserGroupCopy);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerUserGroupCopy);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, false);
@@ -2182,7 +2210,7 @@ public:
     // Quickly creating and destroying a social user group from list
     DEFINE_TEST_CASE(TestSocialManagerAddRemoveUsersFromList)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerAddRemoveUsersFromList);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerAddRemoveUsersFromList);
 
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
@@ -2227,7 +2255,7 @@ public:
         {
             auto localGraphs = socialManagerCppMock->local_graphs();
             auto localGraph = localGraphs[_T("TestXboxUserId")];
-            std::vector<social_event> socialEvents;
+            xsapi_internal_vector<std::shared_ptr<social_event_internal>> socialEvents;
             auto changeStruct = localGraph->do_work(socialEvents);
             VERIFY_IS_TRUE(changeStruct.socialUsers->size() == 99);
         }
@@ -2238,7 +2266,7 @@ public:
     // Verifies that changes recieved during initialization are handled properly
     DEFINE_TEST_CASE(TestSocialManagerMessageDuringInitialization)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerMessageDuringInitialization);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerMessageDuringInitialization);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         std::unordered_map<string_t, std::shared_ptr<HttpResponseStruct>> responses;
@@ -2289,7 +2317,7 @@ public:
     // Verifies that social manager will reconnect after an RTA disconnect is hit
     DEFINE_TEST_CASE(TestSocialManagerReinitializeRTA)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerReinitializeRTA);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerReinitializeRTA);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, false);
@@ -2318,7 +2346,7 @@ public:
         for (auto& ws : m_mockXboxSystemFactory->GetMockWebSocketClients())
         {
             ws->m_connectToFail = true;
-            ws->m_closeStatus = web::websockets::client::websocket_close_status::abnormal_close;
+            ws->m_closeStatus = HCWebSocketCloseStatus_AbnormalClose;
             ws->close();
         }
 
@@ -2342,7 +2370,7 @@ public:
     // Tests all possible cases of filtering working properly
     DEFINE_TEST_CASE(TestSocialManagerFilters)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerFilters);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerFilters);
 
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
@@ -2391,9 +2419,9 @@ public:
         fullJSON[L"people"] = jsonArray;
 
 
-        auto peopleHubResponse = StockMocks::CreateMockHttpCallResponse(fullJSON);
+        auto peopleHubResponse = StockMocks::CreateMockHttpCallResponseInternal(fullJSON);
         std::shared_ptr<HttpResponseStruct> peopleHubResponseStruct = std::make_shared<HttpResponseStruct>();
-        peopleHubResponseStruct->responseList = { peopleHubResponse };
+        peopleHubResponseStruct->responseListInternal = { peopleHubResponse };
         std::unordered_map<string_t, std::shared_ptr<HttpResponseStruct>> responses;
         // set up http response set
         responses[_T("https://peoplehub.mockenv.xboxlive.com")] = peopleHubResponseStruct;
@@ -2538,7 +2566,7 @@ public:
 
     DEFINE_TEST_CASE(TestSocialManagerGetUsersFromXuidList)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerGetUsersFromXuidList);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerGetUsersFromXuidList);
 
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
@@ -2561,7 +2589,7 @@ public:
 
     DEFINE_TEST_CASE(TestSocialManagerRichPresencePolling)
     {
-        DEFINE_TEST_CASE_PROPERTIES_FOCUS(TestSocialManagerRichPresencePolling);
+        DEFINE_TEST_CASE_PROPERTIES(TestSocialManagerRichPresencePolling);
         m_mockXboxSystemFactory->reinit();
         auto xboxLiveContext = GetMockXboxLiveContext_Cpp();
         auto socialManagerInitializationStruct = Initialize(xboxLiveContext, true);
@@ -2572,9 +2600,9 @@ public:
         );
 
         auto presenceJSON = GenerateInitialPresenceJSON(false);
-        auto presenceResponse = StockMocks::CreateMockHttpCallResponse(presenceJSON);
+        auto presenceResponse = StockMocks::CreateMockHttpCallResponseInternal(presenceJSON);
         std::shared_ptr<HttpResponseStruct> presenceResponseStruct = std::make_shared<HttpResponseStruct>();
-        presenceResponseStruct->responseList = { presenceResponse };
+        presenceResponseStruct->responseListInternal = { presenceResponse };
         std::unordered_map<string_t, std::shared_ptr<HttpResponseStruct>> responses;
         // set up http response set
         responses[_T("https://userpresence.mockenv.xboxlive.com")] = presenceResponseStruct;
@@ -2606,9 +2634,9 @@ public:
         socialManagerInitializationStruct.socialManager->SetRichPresencePollingState(xboxLiveContext->user(), false);
 
         presenceJSON = GenerateInitialPresenceJSON(true);
-        presenceResponse = StockMocks::CreateMockHttpCallResponse(presenceJSON);
+        presenceResponse = StockMocks::CreateMockHttpCallResponseInternal(presenceJSON);
         presenceResponseStruct = std::make_shared<HttpResponseStruct>();
-        presenceResponseStruct->responseList = { presenceResponse };
+        presenceResponseStruct->responseListInternal = { presenceResponse };
         // set up http response set
         responses[_T("https://userpresence.mockenv.xboxlive.com")] = presenceResponseStruct;
 

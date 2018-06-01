@@ -58,15 +58,12 @@ protected:
     std::shared_ptr<xbox::services::xbox_live_app_config> m_appConfig;
     std::unordered_map<string_t, std::shared_ptr<xbox::services::user_context>> m_userContexts;
 
-    const string_t ENDPOINT_ID_CACHE_NAME = _T("endpointId");
+    const xsapi_internal_string ENDPOINT_ID_CACHE_NAME = "endpointId";
     bool m_isInitialized = false;
     string_t m_endpointId;
-
-    static std::mutex s_notificationSingletonLock;
-    static std::shared_ptr<notification_service> s_notificationSingleton;
 };
 
-#ifdef _WIN32
+#if UWP_API || TV_API || UNIT_TEST_SERVICES
 class notification_service_windows : public notification_service
 {
 public:
@@ -82,7 +79,7 @@ protected:
     pplx::task<xbox_live_result<void>> subscribe_to_notifications() override;
 
 private:
-    void on_push_notification_recieved(
+    void on_push_notification_received(
         _In_ Windows::Networking::PushNotifications::PushNotificationChannel ^sender,
         _In_ Windows::Networking::PushNotifications::PushNotificationReceivedEventArgs ^args
         );

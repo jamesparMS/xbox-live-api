@@ -27,13 +27,13 @@ simplified_stats_service::simplified_stats_service(
 
 pplx::task<xbox_live_result<void>>
 simplified_stats_service::update_stats_value_document(
-    _In_ stats_value_document& statValuePostDocument
+    _In_ stats_value_document& statsDocToPost
     )
 {
-    statValuePostDocument.increment_revision();
+    statsDocToPost.set_revision_from_clock();
 
     string_t pathAndQuery = pathandquery_simplified_stats_subpath(
-        m_userContext->xbox_user_id(),
+        utils::string_t_from_internal_string(m_userContext->xbox_user_id()),
         m_appConfig->scid(),
         false
         );
@@ -46,7 +46,7 @@ simplified_stats_service::update_stats_value_document(
         xbox_live_api::update_stats_value_document
         );
 
-    httpCall->set_request_body(statValuePostDocument.serialize());
+    httpCall->set_request_body(statsDocToPost.serialize());
 
     auto task = httpCall->get_response_with_auth(m_userContext, http_call_response_body_type::json_body)
     .then([](std::shared_ptr<http_call_response> response)
@@ -63,7 +63,7 @@ pplx::task<xbox_live_result<stats_value_document>>
 simplified_stats_service::get_stats_value_document()
 {
     string_t pathAndQuery = pathandquery_simplified_stats_subpath(
-        m_userContext->xbox_user_id(),
+        utils::string_t_from_internal_string(m_userContext->xbox_user_id()),
         m_appConfig->scid(),
         false
         );

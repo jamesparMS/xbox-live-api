@@ -10,7 +10,6 @@
 
 #ifdef __OBJC__
 #import <UIKit/UIKit.h>
-#import "MSAAuthentication/MSAAccountManager.h"
 #endif
 #ifndef _WIN32
 #include "pplx/pplxtasks.h"
@@ -43,6 +42,7 @@ NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_BEGIN
 // Forward declaration
 class sign_out_completed_event_args;
 class user_impl;
+class token_and_signature_result_internal;
 class user_factory;
 class xbox_live_server_impl;
 class auth_config;
@@ -90,7 +90,7 @@ public:
     /// <summary>
     /// Gets the singleton instance
     /// </summary>
-    _XSAPIIMP static std::shared_ptr<xbox_live_services_settings> get_singleton_instance();
+    _XSAPIIMP static std::shared_ptr<xbox_live_services_settings> get_singleton_instance(_In_ bool createIfRequired = true);
 
     /// <summary>
     /// Used by titles to register memory allocation hooks that are used by XSAPI when it 
@@ -137,9 +137,9 @@ public:
     /// Sets the level of debug messages to send to the debugger's Output window.
     /// </summary>
     _XSAPIIMP void set_diagnostics_trace_level(_In_ xbox_services_diagnostics_trace_level value);
-
+    
     /// <summary>
-    /// Registers to recieve Windows Push Nofication Service(WNS) events.  Event handlers will receive the xbox user id and notification type.
+    /// Registers to receive Windows Push Notification Service(WNS) events.  Event handlers will receive the xbox user id and notification type.
     /// </summary>
     /// <param name="handler">The event handler function to call.</param>
     /// <returns>
@@ -148,7 +148,7 @@ public:
     _XSAPIIMP function_context add_wns_handler(_In_ const std::function<void(const xbox_live_wns_event_args&)>& handler);
 
     /// <summary>
-    /// Unregisters from recieving Windows Push Nofication Service(WNS) events.
+    /// Unregisters from receiving Windows Push Notification Service(WNS) events.
     /// </summary>
     /// <param name="context">The function_context object that was returned when the event handler was registered. </param>
     _XSAPIIMP void remove_wns_handler(_In_ function_context context);
@@ -171,8 +171,8 @@ public:
 private:
     xbox_live_services_settings();
 
-    std::function<_Ret_maybenull_ _Post_writable_byte_size_(dwSize) void*(_In_ size_t dwSize)> m_pMemAllocHook;
-    std::function<void(_In_ void* pAddress)> m_pMemFreeHook;
+    std::function<_Ret_maybenull_ _Post_writable_byte_size_(dwSize) void*(_In_ size_t dwSize)> m_pCustomMemAllocHook;
+    std::function<void(_In_ void* pAddress)> m_pCustomMemFreeHook;
 
     void set_log_level_from_diagnostics_trace_level();
 
@@ -186,8 +186,12 @@ private:
     function_context m_wnsHandlersCounter;
 
     friend class xsapi_memory;
+    friend void *custom_mem_alloc_wrapper(_In_ size_t size, _In_ uint32_t memoryType);
+    friend void custom_mem_free_wrapper(_In_ void *pointer, _In_ uint32_t memoryType);
 };
 
+
+#if XSAPI_NONXDK_CPP_AUTH || XSAPI_NONXDK_WINRT_AUTH
 /// <summary>
 /// Contains information about the authorization token and digital signature for an HTTP request by a user.
 /// This class is returned as the result of a call to xbox_live_user.get_token_and_signature().
@@ -204,134 +208,78 @@ public:
     /// Internal function
     /// </summary>
     token_and_signature_result(
-        _In_ string_t token,
-        _In_ string_t signature,
-        _In_ string_t xuid,
-        _In_ string_t gamertag,
-        _In_ string_t userHash,
-        _In_ string_t ageGroup,
-        _In_ string_t privileges,
-        _In_ string_t webAccountId,
-        _In_ string_t reserved
+        _In_ std::shared_ptr<token_and_signature_result_internal> internalObj
         );
-
-#ifndef DEFAULT_MOVE_ENABLED
-    _XSAPIIMP token_and_signature_result(token_and_signature_result&& other);
-    _XSAPIIMP token_and_signature_result& operator=(token_and_signature_result&& other);
-#endif
 
     /// <summary>
     /// The authorization token for the HTTP request.
     /// </summary>
-    _XSAPIIMP const string_t& token() const;
+    _XSAPIIMP string_t token() const;
 
     /// <summary>
     /// The digital signature for the HTTP request.
     /// </summary>
-    _XSAPIIMP const string_t& signature() const;
+    _XSAPIIMP string_t signature() const;
 
     /// <summary>
     /// The unique ID tied to the Xbox user's account.
     /// </summary>
-    _XSAPIIMP const string_t& xbox_user_id() const;
+    _XSAPIIMP string_t xbox_user_id() const;
 
     /// <summary>
     /// The gamertag name associated with the Xbox user's account.
     /// </summary>
-    _XSAPIIMP const string_t& gamertag() const;
+    _XSAPIIMP string_t gamertag() const;
 
     /// <summary>
     /// The hashcode that identifies the user. This value is used for HTTP calls.
     /// </summary>
-    _XSAPIIMP const string_t& xbox_user_hash() const;
+    _XSAPIIMP string_t xbox_user_hash() const;
 
     /// <summary>
     /// Internal function
     /// </summary>
-    _XSAPIIMP const string_t& reserved() const;
+    _XSAPIIMP string_t reserved() const;
 
     /// <summary>
     /// The age group
     /// </summary>
-    _XSAPIIMP const string_t& age_group() const;
-
+    _XSAPIIMP string_t age_group() const;
+    
     /// <summary>
     /// The privileges
     /// </summary>
-    _XSAPIIMP const string_t& privileges() const;
+    _XSAPIIMP string_t privileges() const;
+    
+#if XSAPI_U
+    /// <summary>
+    /// The settings related user restrictions.
+    /// </summary>
+    _XSAPIIMP string_t user_settings_restrictions() const;
+    
+    /// <summary>
+    /// The enforcement related user restrictions.
+    /// </summary>
+    _XSAPIIMP string_t user_enforcement_restrictions() const;
+    
+    /// <summary>
+    /// The title related user restrictions.
+    /// </summary>
+    _XSAPIIMP string_t user_title_restrictions() const;
+#endif
 
     /// <summary>
     /// The web account id
     /// </summary>
-    _XSAPIIMP const string_t& web_account_id() const;
-
-private:
-
-    string_t m_token;
-    string_t m_signature;
-    string_t m_xboxUserId;
-    string_t m_gamerTag;
-    string_t m_xboxUserHash;
-    string_t m_ageGroup;
-    string_t m_privileges;
-    string_t m_webAccountId;
-    string_t m_reserved;
+    _XSAPIIMP string_t web_account_id() const;
 
 #if UWP_API
-public:
-    token_and_signature_result(
-        Windows::Security::Authentication::Web::Core::WebTokenRequestResult^ tokenResult
-        );
-
     Windows::Security::Authentication::Web::Core::WebTokenRequestResult^ token_request_result() const;
+#endif
 
 private:
-    Windows::Security::Authentication::Web::Core::WebTokenRequestResult^ m_tokenResult;
-#endif 
+    std::shared_ptr<token_and_signature_result_internal> m_internalObj;
 };
-
-#if (XSAPI_SERVER || UNIT_TEST_SYSTEM)
-class xbox_live_server
-{
-public:
-    _XSAPIIMP xbox_live_server();
-
-    _XSAPIIMP pplx::task<XBOX_LIVE_NAMESPACE::xbox_live_result<void>> signin(_In_ cert_context cert);
-
-    _XSAPIIMP pplx::task<XBOX_LIVE_NAMESPACE::xbox_live_result<token_and_signature_result>>
-        get_token_and_signature(
-            _In_ const string_t& httpMethod,
-            _In_ const string_t& url,
-            _In_ const string_t& headers
-            );
-
-    _XSAPIIMP pplx::task<XBOX_LIVE_NAMESPACE::xbox_live_result<token_and_signature_result>>
-        get_token_and_signature(
-            _In_ const string_t& httpMethod,
-            _In_ const string_t& url,
-            _In_ const string_t& headers,
-            _In_ const string_t& requestBodyString
-            );
-
-    _XSAPIIMP pplx::task<XBOX_LIVE_NAMESPACE::xbox_live_result<token_and_signature_result>>
-        get_token_and_signature_array(
-            _In_ const string_t& httpMethod,
-            _In_ const string_t& url,
-            _In_ const string_t& headers,
-            _In_ const std::vector<unsigned char>& requestBodyArray
-            );
-
-    _XSAPIIMP bool is_signed_in() const;
-
-private:
-    std::shared_ptr<xbox_live_server_impl> m_server_impl;
-
-    friend XBOX_LIVE_NAMESPACE::user_context;
-};
-
-#endif //#if XSAPI_SERVER
-
-#if !TV_API
 
 /// <summary>
 /// Enumeration values that indicate the result status of sign in.
@@ -404,19 +352,27 @@ private:
     bool m_newAccount;
 };
 
+#if XSAPI_U
+/// <summary>
+/// Optional configuration for sign in process
+/// </summary>
+class xbox_sign_in_options
+{
+public:
+    void setLogInButtonText(const string_t& buttonText) { m_logInButtonText = buttonText; }
+    const string_t& getLogInButtonText() { return m_logInButtonText; }
+
+private:
+    string_t m_logInButtonText;
+};
+#endif
+
 /// <summary>
 /// Represents a player that is associated with a device or a controller.
 /// </summary>
 class xbox_live_user : public std::enable_shared_from_this<xbox_live_user>
 {
 public:
-#if XSAPI_SERVER
-    _XSAPIIMP pplx::task<xbox_live_result<void>> signin(
-        _In_ std::shared_ptr<xbox_live_server> server,
-        _In_ const string_t& user_delegation_ticket
-        );
-#endif
-
     /// <summary>
     /// Attempt to sign a player into their Xbox Live account. This call may bring up
     /// a sign-in user interface.
@@ -431,12 +387,28 @@ public:
     /// </remarks>
     _XSAPIIMP pplx::task<xbox_live_result<sign_in_result>> signin();
 
+#if XSAPI_U
+    /// <summary>
+    /// Attempt to sign a player into their Xbox Live account. This call may bring up
+    /// a sign-in user interface that will use customization overrides from the supplied xbox_sign_in_options object.
+    /// </summary>
+    /// <returns>
+    /// Returns a pplx::task&lt;T&gt; object that represents the state of the asynchronous operation.
+    /// </returns>
+    /// <remarks>
+    /// You should only call this method if silent sign-in indicates that user interaction is required.
+    /// For UWA, this API is to be called from UI thread, if you're calling from non-UI thread or not sure, please use 
+    /// signin_silently(Platform::Object^ coreDispatcherObj) version instead.
+    /// </remarks>
+    _XSAPIIMP pplx::task<xbox_live_result<sign_in_result>> signin(_In_ std::shared_ptr<xbox_sign_in_options> options);
+#endif
+
     /// <summary>
     /// Attempt to silently sign a player into their Xbox Live account.
     /// </summary>
     /// <returns>
     /// Returns a pplx::task&lt;T&gt; object that represents the state of the asynchronous operation.
-    /// If silent sign-in is not successfull, result.err() indicates the error.
+    /// If silent sign-in is not successful, result.err() indicates the error.
     /// </returns>
     /// <remarks>
     /// If the app is unable to silently sign-in, the API return sign_in_result with user_interaction_required status .
@@ -455,11 +427,12 @@ public:
     /// <summary>
     /// Internal function
     /// </summary>
-    _XSAPIIMP const string_t& _Title_telemetry_session_id();
+    _XSAPIIMP string_t _Title_telemetry_session_id();
     
 #if XSAPI_U
     _XSAPIIMP static std::shared_ptr<xbox_live_user> get_last_signed_in_user();
     _XSAPIIMP pplx::task<xbox_live_result<void>> signout();
+    _XSAPIIMP void clear_token_cache();
 #endif
 
 #if WINAPI_FAMILY && WINAPI_FAMILY==WINAPI_FAMILY_APP
@@ -473,7 +446,7 @@ public:
     /// </returns>
     /// <remarks>
     /// You should only call this method if silent sign-in indicates that user interaction is required.
-    /// If you're calling this API from non-UI thread, parameter coreDispatcherObj is requried, so that app UI
+    /// If you're calling this API from non-UI thread, parameter coreDispatcherObj is required, so that app UI
     /// can be rendered and locale can be generated.
     /// </remarks>
     _XSAPIIMP pplx::task<xbox_live_result<sign_in_result>> signin(_In_opt_ Platform::Object^ coreDispatcherObj);
@@ -484,12 +457,12 @@ public:
     /// <param name="coreDispatcherObj">The Windows Runtime core event message dispatcher.</param>
     /// <returns>
     /// Returns a pplx::task&lt;T&gt; object that represents the state of the asynchronous operation.
-    /// If silent sign-in is not successfull, result.err() indicates the error.
+    /// If silent sign-in is not successful, result.err() indicates the error.
     /// </returns>
     /// <remarks>
     /// If the app is unable to silently sign-in, the API return sign_in_result with user_interaction_required status .
     /// to sign-in, so the app should then call signin().
-    /// If you're calling this API from non-UI thread, parameter coreDispatcherObj is requried, so that app locale can be generated.
+    /// If you're calling this API from non-UI thread, parameter coreDispatcherObj is required, so that app locale can be generated.
     /// </remarks>
     _XSAPIIMP pplx::task<xbox_live_result<sign_in_result>> signin_silently(_In_opt_ Platform::Object^ coreDispatcherObj);
 #endif 
@@ -509,23 +482,40 @@ public:
     /// <summary>
     /// Gets a unique ID that is tied to the user's account which persists across multiple devices.
     /// </summary>
-    _XSAPIIMP const string_t& xbox_user_id() const;
+    _XSAPIIMP string_t xbox_user_id() const;
 
     /// <summary>
     /// The Xbox Live public gamertag name associated with the user.
     /// </summary>
-    _XSAPIIMP const string_t& gamertag() const;
+    _XSAPIIMP string_t gamertag() const;
 
     /// <summary>
     /// Gets the age group of the user.
     /// </summary>
-    _XSAPIIMP const string_t& age_group() const;
-
+    _XSAPIIMP string_t age_group() const;
+    
     /// <summary>
     /// Gets the privileges of the user.
     /// </summary>
-    _XSAPIIMP const string_t& privileges() const;
-
+    _XSAPIIMP string_t privileges() const;
+    
+#if XSAPI_U
+    /// <summary>
+    /// Gets the settings related user restrictions.
+    /// </summary>
+    _XSAPIIMP const string_t& user_settings_restrictions() const;
+    
+    /// <summary>
+    /// Gets the enforcement related user restrictions.
+    /// </summary>
+    _XSAPIIMP const string_t& user_enforcement_restrictions() const;
+    
+    /// <summary>
+    /// Gets the title related user restrictions.
+    /// </summary>
+    _XSAPIIMP const string_t& user_title_restrictions() const;
+#endif
+    
     std::shared_ptr<auth_config> auth_config();
 
     /// <summary>
@@ -541,10 +531,10 @@ public:
     /// Check https://msdn.microsoft.com/en-us/library/windows/apps/windows.security.credentials.webaccount.aspx
     /// for more information about WebAccount
     /// </remarks>
-    _XSAPIIMP const string_t& web_account_id() const;
+    _XSAPIIMP string_t web_account_id() const;
 
     /// <summary>
-    /// The Windows System NT user associated with the Xbox Live User, only avaliable in Multi-User application.
+    /// The Windows System NT user associated with the Xbox Live User, only available in Multi-User application.
     /// </summary>
     _XSAPIIMP Windows::System::User^ windows_system_user() const;
 #endif
@@ -559,7 +549,7 @@ public:
     /// An interface for tracking the progress of the asynchronous call. The result is an object
     /// indicating the token and the digital signature of the entire request, including the token.
     /// </returns>
-    _XSAPIIMP pplx::task<XBOX_LIVE_NAMESPACE::xbox_live_result<token_and_signature_result> >
+    _XSAPIIMP pplx::task<xbox::services::xbox_live_result<token_and_signature_result> >
     get_token_and_signature(
         _In_ const string_t& httpMethod,
         _In_ const string_t& url,
@@ -578,7 +568,7 @@ public:
     /// An interface for tracking the progress of the asynchronous call. The result is an object
     /// indicating the token and the digital signature of the entire request, including the token.
     /// </returns>
-    _XSAPIIMP pplx::task<XBOX_LIVE_NAMESPACE::xbox_live_result<token_and_signature_result> >
+    _XSAPIIMP pplx::task<xbox::services::xbox_live_result<token_and_signature_result> >
     get_token_and_signature(
         _In_ const string_t& httpMethod,
         _In_ const string_t& url,
@@ -598,7 +588,7 @@ public:
     /// An interface for tracking the progress of the asynchronous call. The result is an object
     /// indicating the token and the digital signature of the entire request, including the token.
     /// </returns>
-    _XSAPIIMP pplx::task<XBOX_LIVE_NAMESPACE::xbox_live_result<token_and_signature_result> >
+    _XSAPIIMP pplx::task<xbox::services::xbox_live_result<token_and_signature_result> >
     get_token_and_signature_array(
         _In_ const string_t& httpMethod,
         _In_ const string_t& url,
@@ -611,7 +601,7 @@ public:
     /// <summary>
     /// Registers an event handler for when user sign out completes.
     /// </summary>
-    /// <param name="handler">The callback function that recieves notifications.</param>
+    /// <param name="handler">The callback function that receives notifications.</param>
     /// <returns>
     /// A function_context object that can be used to unregister the event handler.
     /// </returns>
@@ -621,7 +611,6 @@ public:
     /// Unregisters an event handler for sign-out completion notifications.
     /// </summary>
     /// <param name="context">The function_context object that was returned when the event handler was registered. </param>
-    /// <param name="handler">The callback function that recieves notifications.</param>
     _XSAPIIMP static void remove_sign_out_completed_handler(_In_ function_context context);
 
     std::shared_ptr<user_impl> _User_impl() { return m_user_impl; }
@@ -629,6 +618,8 @@ public:
 protected:
     std::shared_ptr<user_impl> m_user_impl;
 
+private:
+    pplx::task<xbox_live_result<sign_in_result>> signin_helper(bool showUI, bool forceRefresh);
 };
 
 
@@ -658,7 +649,8 @@ private:
     std::shared_ptr<user_impl> m_user_impl;
 };
 
-#endif //!TV_API
+#endif // XSAPI_NONXDK_CPP_AUTH || XSAPI_NONXDK_WINRT_AUTH
+
 
 /// <summary>Enumeration values that indicate the result code from string verification.
 /// These values are defined on the service side and should not be modified.
@@ -759,15 +751,15 @@ public:
     /// Internal function
     /// </summary>
     string_service(
-        _In_ std::shared_ptr<XBOX_LIVE_NAMESPACE::user_context> userContext,
-        _In_ std::shared_ptr<XBOX_LIVE_NAMESPACE::xbox_live_context_settings> xboxLiveContextSettings,
-        _In_ std::shared_ptr<XBOX_LIVE_NAMESPACE::xbox_live_app_config> appConfig
+        _In_ std::shared_ptr<xbox::services::user_context> userContext,
+        _In_ std::shared_ptr<xbox::services::xbox_live_context_settings> xboxLiveContextSettings,
+        _In_ std::shared_ptr<xbox::services::xbox_live_app_config> appConfig
         );
 
 private:
-    std::shared_ptr<XBOX_LIVE_NAMESPACE::user_context> m_userContext;
-    std::shared_ptr<XBOX_LIVE_NAMESPACE::xbox_live_context_settings> m_xboxLiveContextSettings;
-    std::shared_ptr<XBOX_LIVE_NAMESPACE::xbox_live_app_config> m_appConfig;
+    std::shared_ptr<xbox::services::user_context> m_userContext;
+    std::shared_ptr<xbox::services::xbox_live_context_settings> m_xboxLiveContextSettings;
+    std::shared_ptr<xbox::services::xbox_live_app_config> m_appConfig;
 };
 } // namespace system
 NAMESPACE_MICROSOFT_XBOX_SERVICES_CPP_END

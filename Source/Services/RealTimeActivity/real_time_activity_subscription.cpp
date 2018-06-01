@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#pragma once
 #include "pch.h"
 #include "xsapi/real_time_activity.h"
 #include "utils.h"
@@ -13,7 +12,7 @@ real_time_activity_subscription::real_time_activity_subscription(
     ) :
     m_subscriptionErrorHandler(std::move(subscriptionErrorHandler)),
     m_state(real_time_activity_subscription_state::unknown),
-    m_guid(xbox::services::utils::create_guid(true))
+    m_guid(utils::string_t_from_internal_string(xbox::services::utils::create_guid(true)))
 {
     XSAPI_ASSERT(m_subscriptionErrorHandler != nullptr);
 }

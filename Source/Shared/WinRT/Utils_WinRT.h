@@ -116,6 +116,20 @@ public:
         return vector;
     }
 
+    template<typename T, typename cppT>
+    static Platform::Collections::Vector<T>^ CreatePlatformVectorFromStdVectorEnum(
+        _In_ const std::vector<cppT>& cppVector
+        )
+    {
+        auto vector = ref new Platform::Collections::Vector<T>();
+        for (const auto& item : cppVector)
+        {
+            vector->Append(static_cast<T>(item));
+        }
+
+        return vector;
+    }
+
     static std::vector<string_t> CreateStdVectorStringFromPlatformVectorObj(
         _In_opt_ Windows::Foundation::Collections::IVectorView<Platform::String^>^ platformVector
         )
@@ -225,6 +239,10 @@ public:
         _In_ Windows::Foundation::Collections::PropertySet^ value
         );
 
+    static inline Platform::String^ StringFromInternalString(const xsapi_internal_string& internalString)
+    {
+        return ref new Platform::String(xbox::services::utils::string_t_from_internal_string(internalString).data());
+    }
 };
 
 NAMESPACE_MICROSOFT_XBOX_SERVICES_SYSTEM_END
